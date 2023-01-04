@@ -1,0 +1,1 @@
+# monobank-api-community-docs
