@@ -26,6 +26,11 @@ Link на документацію щодо Monobank Open API:
 
 Тільки розробник може надати _абсолютно точну та вичерпну_ інформацію по даному API.
 
+### Корпоративний API для провайдерів послуг
+
+"Production" доступ до API надається після підтвердження заявки відправленої через API: 
+https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-kompaniyi/paths/~1personal~1auth~1registration/post
+
 ## Telegram API community
 
 У Telegram створено чат для спільноти користувачів Monobank Open API для наступного:
