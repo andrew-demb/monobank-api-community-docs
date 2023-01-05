@@ -74,6 +74,7 @@ https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-k
 Monobank має не тільки open API, але й інші:
 1. Інтернет-еквайринг
 2. Покупка частинами
+3. Expirenza by mono (shaketopay)
 
 Щодо даних сервісів Вам можуть надати консультацію співробітники Monobank, до яких Ви можете звернутись
 за каналами комунікації що надані на лендінг сторінках сервісів.
@@ -91,3 +92,9 @@ Monobank має не тільки open API, але й інші:
 Посилання на лендінг сторінку сервісу: https://chast.monobank.ua/vendors
 
 Посилання на документацію: https://u2-demo-ext.mono.st4g3.com/docs/index.html
+
+### 3. Expirenza by mono (shaketopay)
+
+Посилання на лендінг сторінку сервісу: https://shaketopay.com.ua/
+
+Посилання на документацію: https://api.shaketopay.com.ua/
