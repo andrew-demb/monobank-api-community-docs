@@ -1,6 +1,6 @@
 # Monobank API community docs
 
-![logo](https://user-images.githubusercontent.com/59166229/211002581-faa622e4-d47f-4c93-9d9d-afce50484339.png)
+<img alt="logo" src="https://user-images.githubusercontent.com/59166229/211002581-faa622e4-d47f-4c93-9d9d-afce50484339.png" width="200" height="200" />
 
 Більшість інформації у поточному репозиторії буде відноситись саме до Monobank open API.
 
