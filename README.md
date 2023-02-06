@@ -32,6 +32,8 @@ Link на документацію щодо Monobank Open API:
 "Production" доступ до API надається ЛИШЕ після підтвердження заявки відправленої через API: 
 https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-kompaniyi/paths/~1personal~1auth~1registration/post
 
+Алгоритм підпису запитів до API ("X-Sign" HTTP header): https://gist.github.com/Sominemo/64845669d6326f2f73d356f025656bdb#signing-the-request
+
 ## Telegram API community
 
 У Telegram створено чат для спільноти користувачів Monobank Open API для наступного:
