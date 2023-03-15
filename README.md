@@ -62,8 +62,6 @@ Endpoint виписки транзакцій ([docs](https://api.monobank.ua/doc
 - Якщо знову кількість транзакцій = 500 - необхідно виконувати запити до того часу поки кількість транзакцій не буде < 500.
 - Відповідно якщо кількість транзакцій < 500, то вже отримано всі платежі за вказаний період.
 
-[1] https://api.monobank.ua/docs/#tag/Kliyentski-personalni-dani/paths/~1personal~1statement~1{account}~1{from}~1{to}/get
-
 ## Troubleshooting
 
 ### 1. Помилка при зверненні до API - 403 status code з HTML у тілі відповіді
