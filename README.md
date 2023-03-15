@@ -48,6 +48,22 @@ https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-k
 
 > Посилання на чат доступне на сторінці документації до API.
 
+## Незадокументовані особливості API
+
+### 1. Обмеження максимальної кількості платежів повернутих на один запит до API
+
+Endpoint виписки транзакцій ([docs](https://api.monobank.ua/docs/#tag/Kliyentski-personalni-dani/paths/~1personal~1statement~1{account}~1{from}~1{to}/get)) за одне звернення повертає не більше 500 транзакцій відсортованих з кінця періоду 
+(тобто від часу `to` до `from`).
+
+> Можлива причина введеного обмеження на кількість результатів та відсутність інструментів пагінації з offset - https://use-the-index-luke.com/sql/partial-results/fetch-next-page
+
+Рекомендації:
+- Якщо кількість транзакцій = 500 - необхідно виконати додатковий запит змінивши (зменшивши) час `to` до часу останнього платежу, з відповіді.
+- Якщо знову кількість транзакцій = 500 - необхідно виконувати запити до того часу поки кількість транзакцій не буде < 500.
+- Відповідно якщо кількість транзакцій < 500, то вже отримано всі платежі за вказаний період.
+
+[1] https://api.monobank.ua/docs/#tag/Kliyentski-personalni-dani/paths/~1personal~1statement~1{account}~1{from}~1{to}/get
+
 ## Troubleshooting
 
 ### 1. Помилка при зверненні до API - 403 status code з HTML у тілі відповіді
