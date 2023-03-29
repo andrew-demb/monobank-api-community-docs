@@ -102,7 +102,14 @@ Monobank має не тільки open API, але й інші:
 
 Посилання на документацію: https://api.monobank.ua/docs/acquiring.html
 
+#### Wordpress plugin
+
 Офіційний модуль WordPress від Monobank для підключення інтернет-еквайрингу: https://uk.wordpress.org/plugins/monopay/
+
+Інструкція з підключення: 
+1. Заповніть заявку за посиланням https://www.monobank.ua/e-comm
+2. Отримайте підтвердження про відкриття послуги (у застосунок)
+3. Завантажте модуль. Інструкція з інсталяції модуля доступна за посиланням https://doc.clickup.com/d/4e3cn-16048/monobank-woo-commercepaymentgateway
 
 ### 2. Покупка частинами
 
