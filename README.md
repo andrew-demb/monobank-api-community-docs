@@ -126,25 +126,25 @@ Monobank має не тільки open API, але й інші:
 
 ### 1. Інтернет-еквайринг (acquiring)
 
-Посилання на лендінг сторінку сервісу "Plata by mono": https://monobank.ua/e-comm
+Посилання на лендінг сторінку сервісу "Plata by mono": https://monobank.ua/plata-by-mono
 
-Посилання на документацію API: https://api.monobank.ua/docs/acquiring.html
+Посилання на документацію API: https://api.monobank.ua/docs/acquiring.html (або https://monobank.ua/api-docs/acquiring)
 
 #### Known integrations
 
-Monobank надає інформацію щодо існуючих інтеграцій (як офіційних, що підтримуються співробітниками Monobank, так і розроблених їх партнерами) - https://www.monobank.ua/e-comm/platforms-and-partners
+Monobank надає інформацію щодо існуючих інтеграцій (як офіційних, що підтримуються співробітниками Monobank, так і розроблених їх партнерами) - https://monobank.ua/plata-by-mono/integrations
 
-За посиланням вище можна знайти також інструкції щодо встановлення інтеграцій до відомих платформ.
+За посиланням вище можна знайти також інструкції щодо встановлення інтеграцій до відомих платформ (CMS, конструктори вебсайтів, чат-боти тощо).
 
 #### Як дістати OpenAPI specification
 
-Аналогічно до способу отримання специфікації для Monobank open API (див. вище FAQ)
+Аналогічно до способу отримання специфікації для Monobank open API (див. вище FAQ).
 
 ### 2. Покупка частинами
 
-Посилання на лендінг сторінку сервісу: https://chast.monobank.ua/vendors
+Посилання на лендінг сторінку сервісу: https://monobank.ua/chast/vendors
 
-Посилання на документацію API: https://u2-demo-ext.mono.st4g3.com/docs/index.html
+Посилання на документацію API: https://u2-demo-ext.mono.st4g3.com/docs/index.html (або https://monobank.ua/api-docs/chast)
 
 #### Як дістати OpenAPI specification
 
@@ -157,9 +157,9 @@ curl 'https://u2-demo-ext.mono.st4g3.com/v2/api-docs' -H 'accept: application/js
 
 ### 3. Expirenza by mono (shaketopay)
 
-Посилання на лендінг сторінку сервісу: https://shaketopay.com.ua/
+Посилання на лендінг сторінку сервісу: https://shaketopay.com.ua
 
-Посилання на документацію API: https://api.shaketopay.com.ua/
+Посилання на документацію API: https://docs.expirenza.com/api
 
 ### 4. mono checkout
 
