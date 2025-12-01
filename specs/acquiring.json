@@ -1,0 +1,5152 @@
+{
+  "openapi": "3.0.3",
+  "servers": [
+    {
+      "url": "https://api.monobank.ua"
+    }
+  ],
+  "info": {
+    "title": "Acquiring",
+    "version": "v2412",
+    "description": "На кожну зміну статусу рахунку бекенд еквайрингу виконає до 3-х спроб POST запиту, поки у відповідь не отримує http-статус 200 OK. З параметром X-Sign у хідерах. Параметр містить підпис тіла запиту вебхуку по стандарту ECDSA. Приклади верифікації підпису наведено нижче.\n\nAPI може працювати в режимі тестового середовища. Для цього потрібно використовувати токен із https://api.monobank.ua/\n\nДля тестування не потрібно мати термінал або дозвіл для тестування эквайрингу, тестове середовище доступне всім клієнтам банку. В тестовому середовищі для оплати можна використовувати будь-які номер, дату та cvv картки, навіть якщо вони не є дійсними. Єдина умова: номер картки повинен бути валідним за [алгоритмом Луна](https://uk.wikipedia.org/wiki/Алгоритм_Луна). При використанні даних реальної банківської картки, вона буде прийнята, але фінансова авторизація здійснюватись не буде.",
+    "x-logo": {
+      "url": "logo.png",
+      "altText": "logo"
+    }
+  },
+  "paths": {
+    "/api/merchant/invoice/create": {
+      "post": {
+        "summary": "Створення рахунку",
+        "description": "Створення рахунку для оплати",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms",
+            "in": "header",
+            "description": "Назва CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms-Version",
+            "in": "header",
+            "description": "Версія CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Посилання на оплату рахунку",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Пошук за одним із параметрів запиту завершився неуспішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/status?invoiceId={invoiceId}": {
+      "get": {
+        "summary": "Статус рахунку",
+        "description": "Метод перевірки статусу рахунку при розсинхронізації з боку продавця або відсутності webHookUrl при створенні рахунку.",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invoiceId",
+            "in": "query",
+            "description": "Ідентифікатор рахунку",
+            "schema": {
+              "type": "string",
+              "example": "p2_9ZgpZVsl3"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Інформація про рахунок",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Рахунок не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/cancel": {
+      "post": {
+        "summary": "Скасування оплати",
+        "description": "Скасування успішної оплати рахунку",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceCancelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Статус операції скасування",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceCancelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Рахунок не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/remove": {
+      "post": {
+        "summary": "Інвалідація рахунку",
+        "description": "Інвалідація рахунку, якщо за ним ще не було здіснено оплати",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceRemoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Інвойс було деактивовано, пуста відповідь",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Рахунок не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/pubkey": {
+      "get": {
+        "summary": "Відкритий ключ для верифікації підписів",
+        "description": "Отримання відкритого ключа для перевірки підпису, який включено у вебхуки. Ключ можна кешувати і робити запит на отримання нового, коли верифікація підпису з поточним ключем перестане працювати. Кожного разу робити запит на отримання ключа не треба",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Base64-закодований ECDSA відкритий ключ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PubkeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Токен відсутній",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/finalize": {
+      "post": {
+        "summary": "Фіналізація суми холду",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceFinalizeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Результат фіналізації",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceFinalizeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Рахунок не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/qr/details?qrId={qrId}": {
+      "get": {
+        "summary": "Інформація про QR-касу",
+        "description": "Інформація про QR-касу, лише для активованих QR-кас",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qrId",
+            "in": "query",
+            "description": "Ідентифікатор QR-каси",
+            "schema": {
+              "type": "string",
+              "example": "OBJE"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Інформація про QR-касу",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QrDetailsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ідентифікатор QR-каси невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QR-касу не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/qr/reset-amount": {
+      "post": {
+        "summary": "Видалення суми оплати",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QrResetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Суму було видалено, пуста відповідь",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ідентифікатор QR-каси невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QR-касу не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/qr/list": {
+      "get": {
+        "summary": "Список QR-кас",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список QR-кас",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QrListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Токен відсутній",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/details": {
+      "get": {
+        "summary": "Дані мерчанта",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Дані мерчанта",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantDetailsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/statement": {
+      "get": {
+        "summary": "Виписка за період",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "utc unix timestamp",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 1649329978
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "utc unix timestamp",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 1649329978
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "description": "Ідентифікатор терміналу субмерчанту (використовується, якщо мерчант має субмерчантів)",
+            "schema": {
+              "type": "string",
+              "example": "0a8637b3bccb42aa93fdeb791b8b58e9"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Виписка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantStatementResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/wallet/card": {
+      "delete": {
+        "summary": "Видалення токенізованої картки",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cardToken",
+            "in": "query",
+            "description": "Токен картки",
+            "schema": {
+              "type": "string",
+              "example": "67XZtXdR4NpKU3"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Картку видалено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/wallet": {
+      "get": {
+        "summary": "Список карток у гаманці",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "description": "Ідентифікатор гаманця покупця",
+            "schema": {
+              "type": "string",
+              "example": "c1376a611e17b059aeaf96b73258da9c"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список токенізованих карток",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantWalletResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/wallet/payment": {
+      "post": {
+        "summary": "Оплата по токену",
+        "description": "Створення платежу за токеном картки",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms",
+            "in": "header",
+            "description": "Назва CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms-Version",
+            "in": "header",
+            "description": "Версія CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MerchantWalletPaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Дані платежу",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantWalletPaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/payment-direct": {
+      "post": {
+        "summary": "Оплата за реквізитами",
+        "description": "Створення рахунку та його оплата за реквізитами картки. Увага, це апі буде працювати тільки за умови наявності у мерчанта активного PCI DSS сертифіката!",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms",
+            "in": "header",
+            "description": "Назва CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms-Version",
+            "in": "header",
+            "description": "Версія CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentDirectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Дані рахунку та оплати",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantWalletPaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/submerchant/list": {
+      "get": {
+        "summary": "Список субмерчантів",
+        "description": "Дане апі потрібне обмеженому колу осіб, яким при створенні рахунку треба явно вказувати термінал",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список субмерчантів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmerchantListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/receipt?invoiceId={invoiceId}": {
+      "get": {
+        "summary": "Квитанція",
+        "description": "Метод для отримання та відправки квитанції на електронну пошту",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invoiceId",
+            "in": "query",
+            "required": true,
+            "description": "Ідентифікатор рахунку",
+            "schema": {
+              "type": "string",
+              "example": "p2_9ZgpZVsl3"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "description": "Адреса електронної пошти",
+            "schema": {
+              "type": "string",
+              "example": "me@mail.com"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Квитанція",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Інвойс не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/fiscal-checks?invoiceId={invoiceId}": {
+      "get": {
+        "summary": "Фіскальні чеки",
+        "description": "Метод для отримання даних фіскальних чеків та їх статусів",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invoiceId",
+            "in": "query",
+            "description": "Ідентифікатор рахунку",
+            "schema": {
+              "type": "string",
+              "example": "p2_9ZgpZVsl3"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список фіскальних чеків",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiscalCheckListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Інвойс не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/invoice/sync-payment": {
+      "post": {
+        "summary": "Синхронна оплата",
+        "description": "Апі для синхронної оплати, доступ до апі надається через службу турботи та вимагає наявності певного ряду сертифікатів. Один із обʼєктів `cardData`, `applePay`, `googlePay` є обовʼязковим",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms",
+            "in": "header",
+            "description": "Назва CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Cms-Version",
+            "in": "header",
+            "description": "Версія CMS, якщо ви розробляєте платіжний модуль для CMS",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceSyncPaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Дані результату оплати",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceSyncPaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Пошук за одним із параметрів запиту завершився неуспішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/employee/list": {
+      "get": {
+        "summary": "Список співробітників\n",
+        "description": "Список співробітників, які можуть отримати чайові. Для додавання співробітників зверніться в службу турботи. Якщо використовується тестовий токен, то повернуться декілька тестових обʼєктів, які можна буде далі використовувати для налаштовування інтеграції\n",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Масив співробітників",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/split-receiver/list": {
+      "get": {
+        "summary": "Список отримувачів розщеплених платежів",
+        "description": "Метод для отримання списку саб-мерчантів для Розщеплення",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список отримувачів розщеплених платежів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SplitReceiverListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/t2p/terminal/list": {
+      "get": {
+        "summary": "Отримання списку терміналів",
+        "description": "Метод для отримання списку терміналів в смартфоні по торговцю",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з веб-кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список терміналів клієнта",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Пошук за одним із параметрів запиту завершився неуспішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/subscription/create": {
+      "post": {
+        "summary": "Створення регулярного платежу",
+        "description": "Створення регулярного платежу для періодичних списань коштів",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Посилання на оплату регулярного платежу",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Пошук за одним із параметрів запиту завершився неуспішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/subscription/status": {
+      "get": {
+        "summary": "Отримання статусу регулярного платежу",
+        "description": "Метод перевірки статусу регулярного платежу",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subscriptionId",
+            "in": "query",
+            "required": true,
+            "description": "Id регулярного платежу",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Інформація про регулярний платіж",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Підписку не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/subscription/payments": {
+      "get": {
+        "summary": "Перегляд історії платежів за id підписки",
+        "description": "Метод для отримання історії платежів за певною підпискою",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subscriptionId",
+            "in": "query",
+            "required": true,
+            "description": "Id підписки",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Кількість отриманих платежів (дефолт 20)",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Зміщення (дефолт 1)",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "required": true,
+            "description": "Дата від - формат rfc3339 (2024-06-26T18:12:44+03:00)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "required": false,
+            "description": "Дата до - формат rfc3339 (2024-06-26T18:12:44+03:00)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Історія платежів за підпискою",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionPaymentsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Підписку не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/subscriptions/list": {
+      "get": {
+        "summary": "Перегляд регулярних платежів у клієнта",
+        "description": "Метод для отримання списку регулярних платежів",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Статус підписок: active - активні підписки, cancelled - неактивні підписки",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Кількість отриманих підписок (дефолт 20)",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Зміщення (дефолт 1)",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "required": true,
+            "description": "Дата від - формат rfc3339 (2024-06-26T18:12:44+03:00)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "required": false,
+            "description": "Дата до - формат rfc3339 (2024-06-26T18:12:44+03:00)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список регулярних платежів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/subscription/remove": {
+      "post": {
+        "summary": "Інвалідація підписки",
+        "description": "Метод для інвалідації регулярної підписки",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionRemoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Підписку було деактивовано, пуста відповідь",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Підписку не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/subscription/edit": {
+      "post": {
+        "summary": "Керування регулярним платежем",
+        "description": "Метод для керування регулярним платежем (скасування, повернення коштів)",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Зміни виконано, пуста відповідь",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Підписку не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CancelListItem": {
+        "type": "object",
+        "required": [
+          "status",
+          "createdDate",
+          "modifiedDate"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "success",
+              "failure"
+            ],
+            "description": "Статус заяви скасування:\n\n  `processing` - заява на скасування знаходиться в обробці\n\n  `success` - заяву на скасування виконано успішно\n\n  `failure` - неуспішне скасування\n"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у мінімальних одиницях",
+            "example": 4200
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час створення заяви на скасування"
+          },
+          "modifiedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час останньої модифікації операції скасування"
+          },
+          "approvalCode": {
+            "type": "string",
+            "description": "Код авторизації",
+            "example": "662476"
+          },
+          "rrn": {
+            "type": "string",
+            "description": "Ідентифікатор транзакції в платіжній системі",
+            "example": "060189181768"
+          },
+          "extRef": {
+            "type": "string",
+            "example": "635ace02599849e981b2cd7a65f417fe",
+            "description": "Референс операції скасування, який було вказано продавцем"
+          }
+        }
+      },
+      "QrListItem": {
+        "type": "object",
+        "required": [
+          "shortQrId",
+          "qrId",
+          "amountType",
+          "pageUrl"
+        ],
+        "properties": {
+          "shortQrId": {
+            "type": "string",
+            "example": "OBJE",
+            "description": "Короткий ідентифікатор QR-каси"
+          },
+          "qrId": {
+            "type": "string",
+            "description": "Ідентифікатор QR-каси для встановлення суми оплати на існуючих QR-кас",
+            "example": "XJ_DiM4rTd5V"
+          },
+          "amountType": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "client",
+              "fix"
+            ],
+            "description": "Тип суми одноразової каси:\n\n  `merchant` - суму встановлює мерчант\n\n  `client` - суму встановлює клієнт\n\n  `fix` - сума фіксована\n"
+          },
+          "pageUrl": {
+            "type": "string",
+            "description": "Посилання на оплату QR-каси",
+            "example": "https://pay.mbnk.biz/XJ_DiM4rTd5V"
+          }
+        }
+      },
+      "MerchantStatementItem": {
+        "type": "object",
+        "required": [
+          "invoiceId",
+          "status",
+          "maskedPan",
+          "date",
+          "paymentScheme",
+          "amount",
+          "profit",
+          "ccy"
+        ],
+        "properties": {
+          "invoiceId": {
+            "description": "Ідентифікатор рахунку, за яким здійснювалась оплата",
+            "type": "string",
+            "example": "2205175v4MfatvmUL2oR"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "hold",
+              "processing",
+              "success",
+              "failure"
+            ],
+            "example": "success"
+          },
+          "maskedPan": {
+            "type": "string",
+            "description": "Маскований номер картки, за якою здійснювалась оплата",
+            "example": "444403******1902"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час фін. операції у форматі RFC-3339"
+          },
+          "paymentScheme": {
+            "type": "string",
+            "enum": [
+              "bnpl_later_30",
+              "bnpl_parts_4",
+              "full"
+            ],
+            "description": "Схема оплати:\n\n  `bnpl_later_30` - bnpl-оплата\n\n  `bnpl_parts_4` - платіж 4 частини\n\n  `full` - повна оплата\n"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума оплати у мінімальних одиницях (копійки для гривні)"
+          },
+          "profitAmount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4100,
+            "description": "Сума, яку отримає мерчант на свій рахунок після взаєморозрахунку з банком"
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти"
+          },
+          "approvalCode": {
+            "type": "string",
+            "description": "Код авторизації транзакції",
+            "example": "662476"
+          },
+          "rrn": {
+            "type": "string",
+            "description": "Ідентифікатор транзакції в платіжній системі",
+            "example": "060189181768"
+          },
+          "reference": {
+            "type": "string",
+            "example": "84d0070ee4e44667b31371d8f8813947",
+            "description": "Номер чека, замовлення, тощо, який було вказано мерчантом при створенні рахунку"
+          },
+          "shortQrId": {
+            "type": "string",
+            "example": "OBJE",
+            "description": "Короткий ідентифікатор QR-каси"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Призначення платежу, визначається продавцем",
+            "example": "Покупка щастя"
+          },
+          "cancelList": {
+            "type": "array",
+            "description": "Перелік операцій скасування",
+            "items": {
+              "type": "object",
+              "required": [
+                "amount",
+                "ccy",
+                "date",
+                "maskedPan"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "integer",
+                  "format": "int64",
+                  "example": 4200,
+                  "description": "Сума оплати у мінімальних одиницях (копійки для гривні)"
+                },
+                "ccy": {
+                  "type": "integer",
+                  "format": "int32",
+                  "example": 980,
+                  "description": "ISO 4217 код валюти"
+                },
+                "date": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Дата і час фін. операції у форматі RFC-3339"
+                },
+                "approvalCode": {
+                  "type": "string",
+                  "description": "Код авторизації транзакції",
+                  "example": "662476"
+                },
+                "rrn": {
+                  "type": "string",
+                  "description": "Ідентифікатор транзакції в платіжній системі",
+                  "example": "060189181768"
+                },
+                "maskedPan": {
+                  "type": "string",
+                  "description": "Маскований номер картки, на яку здійснювалось повернення коштів",
+                  "example": "444403******1902"
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvoiceCreateRequest": {
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума оплати у мінімальних одиницях (копійки для гривні)"
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти, за замовчуванням 980 (гривня)"
+          },
+          "merchantPaymInfo": {
+            "$ref": "#/components/schemas/MerchantPaymInfoItem"
+          },
+          "redirectUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача після завершення оплати (у разі успіху або помилки)",
+            "example": "https://example.com/your/website/result/page"
+          },
+          "successUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
+            "example": "https://example.com/your/website/success/page"
+          },
+          "failUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
+            "example": "https://example.com/your/website/fail/page"
+          },
+          "webHookUrl": {
+            "type": "string",
+            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту “Статус рахунку”. **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**.\n\nОкрім вебхуків при зміні статусу рахунку, вебхуки також будуть приходити при зміні статусу токенізоваї картки, якщо обʼєкт `saveCardData` було вказано при створенні рахунку",
+            "example": "https://example.com/mono/acquiring/webhook/maybesomegibberishuniquestringbutnotnecessarily"
+          },
+          "validity": {
+            "type": "integer",
+            "format": "int64",
+            "example": 3600,
+            "description": "Строк дії в секундах, за замовчуванням рахунок перестає бути дійсним через 24 години"
+          },
+          "paymentType": {
+            "type": "string",
+            "description": "Тип операції. Для значення `hold` термін складає 9 днів. Якщо через 9 днів холд не буде фіналізовано — він скасовується",
+            "enum": [
+              "debit",
+              "hold"
+            ],
+            "default": "debit"
+          },
+          "qrId": {
+            "type": "string",
+            "description": "Ідентифікатор QR-каси для встановлення суми оплати на існуючих QR-кас",
+            "example": "XJ_DiM4rTd5V"
+          },
+          "code": {
+            "type": "string",
+            "example": "0a8637b3bccb42aa93fdeb791b8b58e9",
+            "description": "Код терміналу субмерчанта, з апі \"Список субмерчантів\". Доступний обмеженому колу мерчантів, які точно знають, що їм це потрібно"
+          },
+          "saveCardData": {
+            "type": "object",
+            "description": "Дані для збереження (токенізації) картки. Для підключення функції, зверніться, будь ласка, в службу турботи monobank. Токенізація недоступна за замовчуванням",
+            "required": [
+              "saveCard"
+            ],
+            "properties": {
+              "saveCard": {
+                "type": "boolean",
+                "description": "Ознака зберігання картки (токенізації) після оплати"
+              },
+              "walletId": {
+                "type": "string",
+                "description": "Ідентифікатор гаманця користувача",
+                "example": "69f780d841a0434aa535b08821f4822c"
+              }
+            }
+          },
+          "agentFeePercent": {
+            "type": "number",
+            "format": "float",
+            "example": 1.42,
+            "description": "Відсоток комісії, який агент встановлює для себе"
+          },
+          "tipsEmployeeId": {
+            "type": "string",
+            "description": "Ідентифікатор співробітника, який може отримати чайові після оплати; ідентифікатор можна взяти з апі \"Список співробітників\""
+          },
+          "displayType": {
+            "type": "string",
+            "description": "Отримання клієнтом посилання iframe для відображення віджета (якщо параметр не передано, то звичайне посилання)",
+            "enum": [
+              "iframe"
+            ]
+          }
+        }
+      },
+      "MerchantPaymInfoItem": {
+        "type": "object",
+        "description": "Інформаційні дані замовлення, яке буде оплачуватись. Обовʼязково вказувати при активній звʼязці з ПРРО (звʼязка створюється у веб-кабінеті https://web.monobank.ua)",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "example": "84d0070ee4e44667b31371d8f8813947",
+            "description": "Номер чека, замовлення, тощо; визначається мерчантом"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Призначення платежу",
+            "example": "Покупка щастя",
+            "maxLength": 280
+          },
+          "comment": {
+            "type": "string",
+            "description": "Службове інформаційне поле",
+            "example": "Покупка щастя",
+            "maxLength": 280
+          },
+          "customerEmails": {
+            "type": "array",
+            "description": "Масив пошт, на які потрібно відправити фіскальний чек, якщо у мерчанта активна звʼязка з checkbox",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            },
+            "example": []
+          },
+          "discounts": {
+            "type": "array",
+            "description": "Масив знижок або надбавок на всю корзину, які будуть передані в checkbox для фіскалізації, якщо звʼязку з checkbox активовано",
+            "items": {
+              "type": "object",
+              "description": "Обʼєкт знижки або надбавки",
+              "required": [
+                "type",
+                "mode",
+                "value"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Тип знижки або надбавки\n\n`DISCOUNT` — знижка\n\n`EXTRA_CHARGE` — надбавка\n",
+                  "enum": [
+                    "DISCOUNT",
+                    "EXTRA_CHARGE"
+                  ]
+                },
+                "mode": {
+                  "type": "string",
+                  "description": "Режим знижки або надбавки\n\n`PERCENT` — відсоток від basketOrder.sum * basketOrder.qty\n\n`VALUE` — числове значення\n",
+                  "enum": [
+                    "PERCENT",
+                    "VALUE"
+                  ]
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Значення, яке буде фігурувати в розрахунках",
+                  "minimum": 0.01,
+                  "multipleOf": 0.01
+                }
+              }
+            }
+          },
+          "basketOrder": {
+            "type": "array",
+            "description": "Склад замовлення, використовується для відображення кошика замовлення, обовʼязково вказувати при активній звʼязці з ПРРО (звʼязка створюється у веб-кабінеті https://web.monobank.ua)",
+            "items": {
+              "type": "object",
+              "description": "Перелік товарів та/або послуг",
+              "required": [
+                "name",
+                "qty",
+                "sum",
+                "code"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Назва товару",
+                  "example": "Табуретка"
+                },
+                "qty": {
+                  "type": "number",
+                  "format": "float",
+                  "description": "Кількість одиниць товару",
+                  "example": 2
+                },
+                "sum": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Сума у мінімальних одиницях валюти за одиницю товару; якщо ви торгуєте табуретками, ціна якої 21 гривня, і у вас замовлення на 2 табуретки, то qty=2, sum=2100, amount=4200, total=4200",
+                  "example": 2100
+                },
+                "total": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Сума у мінімальних одиницях валюти за всю кількість товарів; якщо ви торгуєте табуретками, ціна якої 21 гривня, і у вас замовлення на 2 табуретки, то qty=2, sum=2100, amount=4200, total=4200",
+                  "example": 4200
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Лінк на зображення товару"
+                },
+                "unit": {
+                  "type": "string",
+                  "description": "Назва одиниці вимiру товару",
+                  "example": "шт."
+                },
+                "code": {
+                  "type": "string",
+                  "description": "Код товару, обов'язковий для фіскалізації",
+                  "example": "d21da1c47f3c45fca10a10c32518bdeb"
+                },
+                "barcode": {
+                  "type": "string",
+                  "description": "Значення штрих-коду, може бути потрібно для фіскалізації"
+                },
+                "header": {
+                  "type": "string",
+                  "description": "Текст, що передує назві товару, може бути потрібний для фіскалізації"
+                },
+                "footer": {
+                  "type": "string",
+                  "description": "Текст, після товару, може бути потрібний для фіскалізації"
+                },
+                "tax": {
+                  "type": "array",
+                  "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: не обов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "example": []
+                },
+                "uktzed": {
+                  "type": "string",
+                  "description": "Код УКТ ЗЕД"
+                },
+                "splitReceiverId": {
+                  "type": "string",
+                  "description": "Для схеми розщеплення - референс саб-мерчанта для виплати за товар",
+                  "example": "a1b2c3d4e5f6"
+                },
+                "discounts": {
+                  "type": "array",
+                  "description": "Масив знижок або надбавок на цю позицію в корзині, які будуть передані в checkbox для фіскалізації, якщо звʼязку з checkbox активовано",
+                  "items": {
+                    "type": "object",
+                    "description": "Обʼєкт знижки або надбавки",
+                    "required": [
+                      "type",
+                      "mode",
+                      "value"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "description": "Тип знижки або надбавки\n\n`DISCOUNT` — знижка\n\n`EXTRA_CHARGE` — надбавка\n",
+                        "enum": [
+                          "DISCOUNT",
+                          "EXTRA_CHARGE"
+                        ]
+                      },
+                      "mode": {
+                        "type": "string",
+                        "description": "Режим знижки або надбавки\n\n`PERCENT` — відсоток від basketOrder.sum * basketOrder.qty\n\n`VALUE` — числове значення\n",
+                        "enum": [
+                          "PERCENT",
+                          "VALUE"
+                        ]
+                      },
+                      "value": {
+                        "type": "number",
+                        "description": "Значення, яке буде фігурувати в розрахунках",
+                        "minimum": 0.01,
+                        "multipleOf": 0.01
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvoiceCreateResponse": {
+        "type": "object",
+        "required": [
+          "invoiceId",
+          "pageUrl"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "example": "p2_9ZgpZVsl3",
+            "description": "Ідентифікатор рахунку, унікальний"
+          },
+          "pageUrl": {
+            "type": "string",
+            "example": "https://pay.mbnk.biz/p2_9ZgpZVsl3",
+            "description": "Посилання на сторінку оплати"
+          }
+        }
+      },
+      "PaymentDirectRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "cardData"
+        ],
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума оплати у мінімальних одиницях (копійки для гривні)"
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти, за замовчуванням 980 (гривня)"
+          },
+          "cardData": {
+            "type": "object",
+            "description": "Дані картки",
+            "required": [
+              "pan",
+              "exp",
+              "cvv"
+            ],
+            "properties": {
+              "pan": {
+                "type": "string",
+                "description": "Номер картки",
+                "example": "4242424242424242"
+              },
+              "exp": {
+                "type": "string",
+                "description": "Термін дії картки у форматі `mmyy`",
+                "example": "0642"
+              },
+              "cvv": {
+                "type": "string",
+                "description": "Cvv",
+                "example": 123
+              }
+            }
+          },
+          "merchantPaymInfo": {
+            "$ref": "#/components/schemas/MerchantPaymInfoItem"
+          },
+          "webHookUrl": {
+            "type": "string",
+            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту “Статус рахунку”. **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**",
+            "example": "https://example.com/mono/acquiring/webhook/maybesomegibberishuniquestringbutnotnecessarily"
+          },
+          "paymentType": {
+            "type": "string",
+            "description": "Тип операції. Для значення `hold` термін складає 9 днів. Якщо через 9 днів холд не буде фіналізовано — він скасовується",
+            "enum": [
+              "debit",
+              "hold"
+            ],
+            "default": "debit"
+          },
+          "saveCardData": {
+            "type": "object",
+            "description": "Дані для збереження (токенізації) картки. Для підключення функції, зверніться, будь ласка, в службу турботи monobank. Токенізація недоступна за замовчуванням",
+            "required": [
+              "saveCard"
+            ],
+            "properties": {
+              "saveCard": {
+                "type": "boolean",
+                "description": "Ознака зберігання картки (токенізації) після оплати"
+              },
+              "walletId": {
+                "type": "string",
+                "description": "Ідентифікатор гаманця користувача",
+                "example": "69f780d841a0434aa535b08821f4822c"
+              }
+            }
+          },
+          "redirectUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача після завершення оплати (у разі успіху або помилки), це поле обовʼязкове при `initiationKind=client`",
+            "example": "https://example.com/your/website/result/page"
+          },
+          "successUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
+            "example": "https://example.com/your/website/success/page"
+          },
+          "failUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
+            "example": "https://example.com/your/website/fail/page"
+          },
+          "initiationKind": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "client"
+            ],
+            "description": "Тип проведення платежу:\n\n  `merchant` - платіж з ініціативи мерчанта, наприклад, регулярний платіж — коли клієнт не бере участі у підтвердженні платежу\n\n  `client` - платіж за вимогою клієнта\n"
+          }
+        }
+      },
+      "InvoiceStatusResponse": {
+        "type": "object",
+        "required": [
+          "invoiceId",
+          "status",
+          "amount",
+          "ccy"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "description": "Ідентифікатор рахунку",
+            "example": "p2_9ZgpZVsl3"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "processing",
+              "hold",
+              "success",
+              "failure",
+              "reversed",
+              "expired"
+            ],
+            "description": "Статус операції:\n\n  `created` - рахунок створено успішно, очікується оплата\n\n  `processing` - платіж обробляється\n\n  `hold` - сума заблокована\n\n  `success` - успішна оплата\n\n  `failure` - неуспішна оплата\n\n  `reversed` - оплата повернена після успіху\n\n  `expired` - час дії вичерпано\n\n\nУ випадку вебхуків гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним\n"
+          },
+          "failureReason": {
+            "type": "string",
+            "example": "Неправильний CVV код",
+            "description": "Причина відмови"
+          },
+          "errCode": {
+            "type": "string",
+            "example": "59",
+            "description": "Код помилки, яка виникла під час обробки платежу. Що цей код означає, і куди звернутися можна в розділі \"Помилки в процесі оплати\""
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у мінімальних одиницях валюти",
+            "example": 4200
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Валюта",
+            "example": 980
+          },
+          "finalAmount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Підсумкова сума у мінімальних одиницях валюти, змінюється після оплати та повернень",
+            "example": 4200
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час фін. операції"
+          },
+          "modifiedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час останньої модифікації операції"
+          },
+          "reference": {
+            "type": "string",
+            "description": "Референс платежу, який визначається продавцем",
+            "example": "84d0070ee4e44667b31371d8f8813947"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Призначення платежу, визначається продавцем",
+            "example": "Покупка щастя"
+          },
+          "cancelList": {
+            "type": "array",
+            "description": "Список прийнятих заявок на скасування",
+            "items": {
+              "$ref": "#/components/schemas/CancelListItem"
+            }
+          },
+          "paymentInfo": {
+            "type": "object",
+            "description": "Дані оплати, можуть бути `status=processing`, `status=success`, `status=failure`, `status=reversed`",
+            "required": [
+              "terminal",
+              "paymentSystem",
+              "paymentMethod",
+              "maskedPan"
+            ],
+            "properties": {
+              "maskedPan": {
+                "type": "string",
+                "description": "Маскований номер картки, за якою здійснювалась оплата",
+                "example": "444403******1902"
+              },
+              "approvalCode": {
+                "type": "string",
+                "description": "Код авторизації транзакції",
+                "example": "662476"
+              },
+              "rrn": {
+                "type": "string",
+                "description": "Ідентифікатор транзакції в платіжній системі",
+                "example": "060189181768"
+              },
+              "tranId": {
+                "type": "string",
+                "description": "Ідентифікатор транзакції",
+                "example": "13194036"
+              },
+              "terminal": {
+                "type": "string",
+                "description": "Ідентифікатор платіжного пристрою, через який пройшла транзакція",
+                "example": "MI001088"
+              },
+              "bank": {
+                "type": "string",
+                "description": "Назва банку картки, якою проводилася оплата",
+                "example": "Універсал Банк"
+              },
+              "paymentSystem": {
+                "type": "string",
+                "enum": [
+                  "visa",
+                  "mastercard"
+                ],
+                "description": "Назва платіжної системи картки",
+                "example": "visa"
+              },
+              "paymentMethod": {
+                "type": "string",
+                "enum": [
+                  "pan",
+                  "apple",
+                  "google",
+                  "monobank",
+                  "wallet",
+                  "direct"
+                ],
+                "description": "Метод оплати:\n\n  `pan` - оплата була здійснена за введеним номером картки\n\n  `apple` - оплата була здійснена через apple pay\n\n  `google` - оплата була здійснена через google pay\n\n  `monobank` - оплата була здійснена через monobank\n\n  `wallet` - оплата була здійснена токенізованою карткою\n\n  `direct` - оплата була здійснена через апі 'Оплата за реквізитами' (за умови, що у мерчанта був PCI DSS сертифікат)\n"
+              },
+              "fee": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Еквайрингова комісія в мінімальних одиницях"
+              },
+              "country": {
+                "type": "string",
+                "example": "804",
+                "description": "Країна банку (ISO-3166-1 numeric), якому належить картка, якою була здійснена оплата"
+              },
+              "agentFee": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Комісія агента в мінімальних одиницях"
+              }
+            }
+          },
+          "walletData": {
+            "type": "object",
+            "description": "Параметри картки",
+            "required": [
+              "walletId",
+              "cardToken",
+              "status"
+            ],
+            "properties": {
+              "cardToken": {
+                "type": "string",
+                "example": "67XZtXdR4NpKU3",
+                "description": "Токен картки"
+              },
+              "walletId": {
+                "type": "string",
+                "description": "Ідентифікатор гаманця покупця",
+                "example": "c1376a611e17b059aeaf96b73258da9c"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "new",
+                  "created",
+                  "failed"
+                ],
+                "description": "Статус токенізації картки:\n\n  `new` - прийнято заявку на токенізацію\n\n  `created` - картку успішно токенізовано\n\n  `failed` - картку не вдалось токенізувати\n"
+              }
+            }
+          },
+          "tipsInfo": {
+            "type": "object",
+            "description": "Дані оплати чайових; обʼєкт присутній якщо було вказано `tipsEmployeeId` при створенні рахунку. Якщо поле `amount` відсутнє, значить успішної оплати чайових не було",
+            "required": [
+              "employeeId"
+            ],
+            "properties": {
+              "employeeId": {
+                "type": "string",
+                "description": "Ідентифікатор співробітника, якому можна виплатити чайові"
+              },
+              "amount": {
+                "type": "integer",
+                "description": "Сума успішно сплачених чайових у мінімальних одиницях валюти. Якщо це поле відсутнє, значить успішної оплати чайових не було",
+                "example": 4200
+              }
+            }
+          }
+        }
+      },
+      "InvoiceCancelRequest": {
+        "type": "object",
+        "required": [
+          "invoiceId"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "example": "p2_9ZgpZVsl3",
+            "description": "Ідентифікатор рахунку"
+          },
+          "extRef": {
+            "type": "string",
+            "example": "635ace02599849e981b2cd7a65f417fe",
+            "description": "Референс операції скасування, який визначається продавцем"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 5000,
+            "description": "Сума у мінімальних одиницях (при частковому поверненні)"
+          },
+          "items": {
+            "type": "array",
+            "description": "Список товарів для створення чеку повернення, поле обов'язкове у випадку активованої опції фіскалізації",
+            "items": {
+              "$ref": "#/components/schemas/FiscalizationItem"
+            }
+          }
+        }
+      },
+      "InvoiceRemoveRequest": {
+        "type": "object",
+        "required": [
+          "invoiceId"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "example": "p2_9ZgpZVsl3",
+            "description": "Ідентифікатор рахунку"
+          }
+        }
+      },
+      "EmptyResponse": {
+        "type": "object"
+      },
+      "InvoiceCancelResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "createdDate",
+          "modifiedDate"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "success",
+              "failure"
+            ],
+            "description": "Статус операції:\n\n  `processing` - заява на скасування знаходиться в обробці\n\n  `success` - заяву на скасування виконано успішно\n\n  `failure` - неуспішне скасування\n"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час створення заяви на скасування"
+          },
+          "modifiedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час останньої модифікації операції скасування"
+          }
+        }
+      },
+      "InvoicePaymentInfoResponse": {
+        "type": "object",
+        "required": [
+          "maskedPan",
+          "approvalCode",
+          "rrn",
+          "amount",
+          "ccy",
+          "finalAmount",
+          "terminal",
+          "paymentScheme",
+          "paymentMethod",
+          "domesticCard",
+          "country"
+        ],
+        "properties": {
+          "maskedPan": {
+            "type": "string",
+            "description": "Маскований номер картки, за якою здійснювалась оплата",
+            "example": "444403******1902"
+          },
+          "approvalCode": {
+            "type": "string",
+            "description": "Код авторизації транзакції",
+            "example": "662476"
+          },
+          "rrn": {
+            "type": "string",
+            "description": "Ідентифікатор транзакції в платіжній системі",
+            "example": "060189181768"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума авторизації у мінімальних одиницях валюти",
+            "example": 4200
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Валюта",
+            "example": 980
+          },
+          "finalAmount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Підсумкова сума у мінімальних одиницях валюти",
+            "example": 4200
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час фін. операції"
+          },
+          "terminal": {
+            "type": "string",
+            "description": "Ідентифікатор платіжного пристрою, через який пройшла транзакція",
+            "example": "MI001088"
+          },
+          "paymentScheme": {
+            "type": "string",
+            "enum": [
+              "full",
+              "bnpl_parts_4",
+              "bnpl_later_30"
+            ],
+            "description": "Тип оплати:\n\n  `full` - повна оплата при покупці\n\n  `bnpl_parts_4` - оплата 4-ма частинами (період платежів 14 днів)\n\n  `bnpl_later_30` - оплата на 30-тий день з дня покупки\n"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "pan",
+              "apple",
+              "google",
+              "monobank",
+              "wallet"
+            ],
+            "description": "Метод оплати:\n\n  `pan` - оплата була здійснена за введеним номером картки\n\n  `apple` - оплата була здійснена через apple pay\n\n  `google` - оплата була здійснена через google pay\n\n  `monobank` - оплата була здійснена через monobank\n\n  `wallet` - оплата була здійснена токенізованою карткою\n"
+          },
+          "fee": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Еквайрингова комісія",
+            "example": 420
+          },
+          "domesticCard": {
+            "type": "boolean",
+            "example": true,
+            "description": "Чи належить картка, якою здійснювалась оплата, українському банку"
+          },
+          "country": {
+            "type": "string",
+            "example": "804",
+            "description": "Країна банку (ISO-3166-1 numeric), якому належить картка, якою була здійснена оплата"
+          },
+          "cancelList": {
+            "type": "array",
+            "description": "Список прийнятих заявок на скасування",
+            "items": {
+              "$ref": "#/components/schemas/CancelListItem"
+            }
+          }
+        }
+      },
+      "InvoiceFinalizeRequest": {
+        "type": "object",
+        "required": [
+          "invoiceId"
+        ],
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "example": "p2_9ZgpZVsl3",
+            "description": "Ідентифікатор рахунку"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума у мінімальних одиницях"
+          },
+          "items": {
+            "type": "array",
+            "description": "Список товарів для для фіскалізації, коли сума фіналізації холду не співпадає з оригінальною сумою оплати",
+            "items": {
+              "$ref": "#/components/schemas/FiscalizationItem"
+            }
+          }
+        }
+      },
+      "InvoiceFinalizeResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ],
+            "description": "Статус заяви:\n\n  `success` - заяву на фіналізацію прийнято\n"
+          }
+        }
+      },
+      "PubkeyResponse": {
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFK0UxRnBVZzczYmhGdmp2SzlrMlhJeTZtQkU1MQpib2F0RU1qU053Z1l5ZW55blpZQWh3Z3dyTGhNY0FpT25SYzNXWGNyMGRrY2NvVnFXcVBhWVQ5T3hRPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+            "description": "base64-закодований x.509 ecdsa відркитий ключ"
+          }
+        }
+      },
+      "QrDetailsResponse": {
+        "type": "object",
+        "required": [
+          "shortQrId"
+        ],
+        "properties": {
+          "shortQrId": {
+            "type": "string",
+            "example": "OBJE",
+            "description": "Короткий ідентифікатор QR-каси"
+          },
+          "invoiceId": {
+            "type": "string",
+            "example": "4EwIUTA12JIZ",
+            "description": "Ідентифікатор рахунку для оплати, присутній лише у разі наявності встановленої суми"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у мінімальних одиницях",
+            "example": 4200
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти"
+          }
+        }
+      },
+      "QrResetRequest": {
+        "type": "object",
+        "required": [
+          "qrId"
+        ],
+        "properties": {
+          "qrId": {
+            "type": "string",
+            "example": "XJ_DiM4rTd5V",
+            "description": "Ідентифікатор QR-каси"
+          }
+        }
+      },
+      "QrListResponse": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "description": "Список QR-кас",
+            "items": {
+              "$ref": "#/components/schemas/QrListItem"
+            }
+          }
+        }
+      },
+      "MerchantDetailsResponse": {
+        "type": "object",
+        "required": [
+          "merchantId",
+          "merchantName",
+          "edrpou"
+        ],
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "example": "12o4Vv7EWy",
+            "description": "Ідентифікатор мерчанта"
+          },
+          "merchantName": {
+            "type": "string",
+            "example": "Your Favourite Company",
+            "description": "Найменування мерчанта"
+          },
+          "edrpou": {
+            "type": "string",
+            "example": "4242424242",
+            "description": "Код ЄДРПОУ"
+          }
+        }
+      },
+      "MerchantStatementResponse": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "description": "Виписка, впорядкована від більшої дати до меншої",
+            "items": {
+              "$ref": "#/components/schemas/MerchantStatementItem"
+            }
+          }
+        }
+      },
+      "CardItem": {
+        "type": "object",
+        "description": "Параметри картки",
+        "required": [
+          "pan",
+          "exp",
+          "cvv"
+        ],
+        "properties": {
+          "pan": {
+            "type": "string",
+            "example": "4242424242424242",
+            "description": "Номер картки"
+          },
+          "exp": {
+            "type": "string",
+            "example": "0142",
+            "description": "Строк дії картки у форматі MMYY"
+          },
+          "cvv": {
+            "type": "string",
+            "example": "645",
+            "description": "CVV2 код"
+          }
+        }
+      },
+      "MerchantWalletResponse": {
+        "type": "object",
+        "required": [
+          "wallet"
+        ],
+        "properties": {
+          "wallet": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletItem"
+            }
+          }
+        }
+      },
+      "WalletItem": {
+        "type": "object",
+        "description": "Параметри картки",
+        "required": [
+          "extRef",
+          "cardToken",
+          "maskedPan",
+          "status"
+        ],
+        "properties": {
+          "cardToken": {
+            "type": "string",
+            "example": "67XZtXdR4NpKU3",
+            "description": "Токен картки"
+          },
+          "maskedPan": {
+            "type": "string",
+            "description": "Маскований номер картки",
+            "example": "424242******4242"
+          },
+          "country": {
+            "type": "string",
+            "example": "804",
+            "description": "Країна банку (ISO-3166-1 numeric), якому належить картка"
+          }
+        }
+      },
+      "MerchantWalletPaymentRequest": {
+        "type": "object",
+        "required": [
+          "cardToken",
+          "amount",
+          "ccy",
+          "initiationKind"
+        ],
+        "properties": {
+          "cardToken": {
+            "type": "string",
+            "example": "67XZtXdR4NpKU3",
+            "description": "Токен картки"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у мінімальних одиницях",
+            "example": 4200
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти"
+          },
+          "redirectUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача за умови проведення 3DS",
+            "example": "https://example.com/your/website/result/page"
+          },
+          "successUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
+            "example": "https://example.com/your/website/success/page"
+          },
+          "failUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
+            "example": "https://example.com/your/website/fail/page"
+          },
+          "webHookUrl": {
+            "type": "string",
+            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту “Статус рахунку”. **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**",
+            "example": "https://example.com/mono/acquiring/webhook/maybesomegibberishuniquestringbutnotnecessarily"
+          },
+          "initiationKind": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "client"
+            ],
+            "description": "Тип проведення платежу:\n\n  `merchant` - платіж з ініціативи мерчанта, наприклад, регулярний платіж — коли клієнт не бере участі у підтвердженні платежу\n\n  `client` - платіж за вимогою клієнта, наприклад, клієнт виконує оплату зі збереженої картки\n"
+          },
+          "merchantPaymInfo": {
+            "$ref": "#/components/schemas/MerchantPaymInfoItem"
+          },
+          "paymentType": {
+            "type": "string",
+            "description": "Тип операції. Для значення `hold` термін складає 9 днів. Якщо через 9 днів холд не буде фіналізовано — він скасовується",
+            "enum": [
+              "debit",
+              "hold"
+            ],
+            "default": "debit"
+          }
+        }
+      },
+      "MerchantWalletPaymentResponse": {
+        "type": "object",
+        "required": [
+          "invoiceId",
+          "status",
+          "amount",
+          "ccy",
+          "createdDate",
+          "modifiedDate"
+        ],
+        "properties": {
+          "invoiceId": {
+            "description": "Ідентифікатор рахунку, за яким здійснювалась оплата",
+            "type": "string",
+            "example": "2210012MPLYwJjVUzchj"
+          },
+          "tdsUrl": {
+            "description": "Посилання на 3DS",
+            "type": "string",
+            "example": "https://example.com/tds/url"
+          },
+          "status": {
+            "type": "string",
+            "description": "Статус оплати",
+            "enum": [
+              "processing",
+              "success",
+              "failure"
+            ],
+            "example": "success"
+          },
+          "failureReason": {
+            "type": "string",
+            "example": "Неправильний CVV код",
+            "description": "Причина відмови"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у мінімальних одиницях",
+            "example": 4200
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час створення заяви на оплату"
+          },
+          "modifiedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата і час останньої модифікації операції оплати"
+          }
+        }
+      },
+      "SubmerchantListResponse": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "iban"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "example": "0a8637b3bccb42aa93fdeb791b8b58e9",
+                  "description": "Ідентифікатор терміналу"
+                },
+                "edrpou": {
+                  "type": "string",
+                  "example": "4242424242",
+                  "description": "ЄДРПОУ власника терміналу"
+                },
+                "iban": {
+                  "type": "string",
+                  "example": "UA213996220000026007233566001",
+                  "description": "IBAN власника терміналу"
+                },
+                "owner": {
+                  "type": "string",
+                  "example": "ТОВ Ворона",
+                  "description": "Назва власника терміналу"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ReceiptResponse": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "example": "CJFVBERi0xLj4QKJaqrrK0KMSAw123I4G9ia3go38PAovQ43JlYXRvciAoQXBhY2hl5IEZPUCBWZXJzaW9uIfDIuMykKL...",
+            "description": "base64-закодований PDF файл квитанції"
+          }
+        }
+      },
+      "FiscalCheckListResponse": {
+        "type": "object",
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "type",
+                "status",
+                "fiscalizationSource"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "example": "a2fd4aef-cdb8-4e25-9b36-b6d4672c554d",
+                  "description": "Ідентифікатор чеку"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "sale",
+                    "return"
+                  ],
+                  "example": "sale",
+                  "description": "Тип чеку"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "process",
+                    "done",
+                    "failed"
+                  ],
+                  "example": "done",
+                  "description": "Статус чеку"
+                },
+                "statusDescription": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Опис статусу чеку"
+                },
+                "taxUrl": {
+                  "type": "string",
+                  "example": "https://cabinet.tax.gov.ua/cashregs/check",
+                  "description": "Посилання на чек"
+                },
+                "file": {
+                  "type": "string",
+                  "example": "CJFVBERi0xLj4QKJaqrrK0KMSAw123I4G9ia3go38PAovQ43JlYXRvciAoQXBhY2hl5IEZPUCBWZXJzaW9uIfDIuMykKL...",
+                  "description": "base64-закодований PDF файл чеку"
+                },
+                "fiscalizationSource": {
+                  "type": "string",
+                  "enum": [
+                    "checkbox",
+                    "monopay",
+                    "vchasnokasa"
+                  ],
+                  "example": "monopay",
+                  "description": "Сервіс, через який виконувалась фіскалізація"
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvoiceSyncPaymentRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "ccy"
+        ],
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума оплати у мінімальних одиницях (копійки для гривні)"
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти, за замовчуванням 980 (гривня)"
+          },
+          "merchantPaymInfo": {
+            "type": "object",
+            "description": "Інформаційні дані замовлення, яке буде оплачуватись",
+            "properties": {
+              "reference": {
+                "type": "string",
+                "example": "84d0070ee4e44667b31371d8f8813947",
+                "description": "Номер чека, замовлення, тощо, який було вказано мерчантом при створенні рахунку"
+              },
+              "destination": {
+                "type": "string",
+                "description": "Призначення платежу, визначається продавцем",
+                "example": "Покупка щастя"
+              }
+            }
+          },
+          "cardData": {
+            "type": "object",
+            "description": "Дані для оплати карткою",
+            "required": [
+              "pan",
+              "type",
+              "exp",
+              "eciIndicator"
+            ],
+            "properties": {
+              "pan": {
+                "type": "string",
+                "description": "Номер картки",
+                "example": "4242424242424242"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "FPAN",
+                  "DPAN"
+                ]
+              },
+              "exp": {
+                "type": "string",
+                "description": "Термін дії картки у форматі `mmyy`",
+                "example": "0642"
+              },
+              "cvv": {
+                "type": "string",
+                "description": "Cvv",
+                "example": "123"
+              },
+              "eciIndicator": {
+                "type": "string",
+                "description": "Electronic Commerce Indicator, значення результату аутентифікації",
+                "example": "02"
+              },
+              "cavv": {
+                "type": "string",
+                "description": "Cardholder Authentication Verification Value",
+                "example": "123"
+              },
+              "tavv": {
+                "type": "string",
+                "description": "Token authentication verification value",
+                "example": "tavv"
+              },
+              "dsTranId": {
+                "type": "string",
+                "description": "XID (DSTranID)",
+                "example": "12"
+              },
+              "tReqID": {
+                "type": "string",
+                "description": "Token requestor ID",
+                "example": "51"
+              },
+              "mit": {
+                "type": "string",
+                "description": "Merchant Initiated Transaction Indicator\n\n1 - Merchant Initiated Transaction\n\n2 - Customer Initiated Transaction",
+                "example": "1"
+              },
+              "sst": {
+                "type": "number",
+                "description": "Subsequent Transaction",
+                "example": "2"
+              },
+              "tid": {
+                "type": "string",
+                "description": "Trace Id (ID first operation)",
+                "example": "12"
+              }
+            }
+          },
+          "applePay": {
+            "type": "object",
+            "description": "Дані з криптоконтейнеру Apple Pay",
+            "required": [
+              "token",
+              "exp",
+              "eciIndicator"
+            ],
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "Токен картки",
+                "example": "4242424242424242"
+              },
+              "exp": {
+                "type": "string",
+                "description": "Термін дії картки у форматі `mmyy`",
+                "example": "0642"
+              },
+              "eciIndicator": {
+                "type": "string",
+                "description": "Electronic Commerce Indicator, значення результату аутентифікації",
+                "example": "02"
+              },
+              "cryptogram": {
+                "type": "string",
+                "description": "TAVV криптограма",
+                "example": "AQAAAAoAR9qDi9kAAAAAgGpLpoA="
+              }
+            }
+          },
+          "googlePay": {
+            "type": "object",
+            "description": "Дані з криптоконтейнеру Google Pay",
+            "required": [
+              "token",
+              "exp",
+              "eciIndicator"
+            ],
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "Токен картки",
+                "example": "4242424242424242"
+              },
+              "exp": {
+                "type": "string",
+                "description": "Термін дії картки у форматі `mmyy`",
+                "example": "0642"
+              },
+              "eciIndicator": {
+                "type": "string",
+                "description": "Electronic Commerce Indicator, значення результату аутентифікації",
+                "example": "02"
+              },
+              "cryptogram": {
+                "type": "string",
+                "description": "TAVV криптограма",
+                "example": "AQAAAAoAR9qDi9kAAAAAgGpLpoA="
+              }
+            }
+          }
+        }
+      },
+      "InvoiceSyncPaymentResponse": {
+        "$ref": "#/components/schemas/InvoiceStatusResponse"
+      },
+      "EmployeeListResponse": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "description": "Список співробітників, які можуть отримати чайові",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "extRef"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Ідентифікатор співробітника в системі еквайрингу",
+                  "example": "3QFX7e7mZfo3R"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Ім'я співробітника, вказане мерчантом при додаванні співробітників через службу турботи",
+                  "example": "Артур Дент"
+                },
+                "extRef": {
+                  "type": "string",
+                  "description": "Ідентифікатор співробітника в системі мерчанта",
+                  "example": "abra_kadabra"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "FORBIDDEN",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `FORBIDDEN` - у запиті було надіслано невалідний X-Token\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "forbidden",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      },
+      "FiscalizationItem": {
+        "type": "object",
+        "required": [
+          "name",
+          "code",
+          "qty",
+          "sum"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Назва товару",
+            "example": "Табуретка"
+          },
+          "qty": {
+            "type": "number",
+            "format": "float",
+            "description": "Кількість",
+            "example": 2
+          },
+          "sum": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у мінімальних одиницях валюти за одиницю товару",
+            "example": 2100
+          },
+          "code": {
+            "type": "string",
+            "description": "Код товару, обов'язковий для фіскалізації",
+            "example": "d21da1c47f3c45fca10a10c32518bdeb"
+          },
+          "barcode": {
+            "type": "string",
+            "description": "Значення штрих-коду, може бути потрібно для фіскалізації",
+            "example": "3b2a558cc6e44e218cdce301d80a1779"
+          },
+          "header": {
+            "type": "string",
+            "description": "Текст, що передує назві товару, може бути потрібний для фіскалізації",
+            "example": "Хідер"
+          },
+          "footer": {
+            "type": "string",
+            "description": "Текст, після товару, може бути потрібний для фіскалізації",
+            "example": "Футер"
+          },
+          "tax": {
+            "type": "array",
+            "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: не обов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "uktzed": {
+            "type": "string",
+            "description": "Код УКТ ЗЕД",
+            "example": "uktzedcode"
+          }
+        }
+      },
+      "SplitReceiverListResponse": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "description": "Список отримувачів розщеплених платежів",
+            "items": {
+              "type": "object",
+              "required": [
+                "splitReceiverId",
+                "name",
+                "okpo"
+              ],
+              "properties": {
+                "splitReceiverId": {
+                  "type": "string",
+                  "description": "Ідентифікатор (референс) саб-мерчанта для виплати за товар",
+                  "example": "sr_aB3dC5eF7g"
+                },
+                "okpo": {
+                  "type": "string",
+                  "description": "ІПН Продавця",
+                  "example": "1234567890"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "ПІБ/Назва продавця",
+                  "example": "ФОП Іванов Іван Іванович"
+                }
+              }
+            }
+          }
+        }
+      },
+      "TerminalListResponse": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "description": "Список терміналів, якщо терміналів у клієнта немає, список може бути пустим, відсутнім або null",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "name",
+                "terminal"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "description": "Код терміналу",
+                  "example": "56f27a30b94c4e8db5c3912e7d6af8b1"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Назва терміналу",
+                  "example": "Cats n Cash inc."
+                },
+                "terminal": {
+                  "type": "string",
+                  "description": "Ідентифікатор терміналу",
+                  "example": "MT500001"
+                }
+              }
+            }
+          }
+        },
+        "example": {
+          "list": [
+            {
+              "code": "56f27a30b94c4e8db5c3912e7d6af8b1",
+              "name": "Cats n Cash inc.",
+              "terminal": "MT500001"
+            },
+            {
+              "code": "a4c7e0f19d2b487588e45c6fb2d31e9a",
+              "name": "Pobutovyi mahazyn",
+              "terminal": "MT000001"
+            }
+          ]
+        }
+      },
+      "SubscriptionCreateRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "interval"
+        ],
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума регулярного платежу"
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "ISO 4217 код валюти, за замовчуванням 980 (гривня)"
+          },
+          "redirectUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача після завершення оплати",
+            "example": "https://example.com/your/website/result/page"
+          },
+          "successUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
+            "example": "https://example.com/your/website/success/page"
+          },
+          "failUrl": {
+            "type": "string",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
+            "example": "https://example.com/your/website/fail/page"
+          },
+          "webHookUrls": {
+            "type": "object",
+            "properties": {
+              "chargeUrl": {
+                "type": "string",
+                "description": "Колбек-URL для нотифікації про списання успішне або неуспішне",
+                "example": "https://example.com/mono/subscription/charge/webhook"
+              },
+              "statusUrl": {
+                "type": "string",
+                "description": "Колбек-URL для нотифікації про cтатус підписки",
+                "example": "https://example.com/mono/subscription/status/webhook"
+              }
+            }
+          },
+          "interval": {
+            "type": "string",
+            "example": "1m",
+            "description": "{число}{одиниця}, приклади: \"1d\" - кожен день, \"2w\" - кожні 2 тижні, \"1m\" - кожен місяць, \"1y\" - раз на рік"
+          },
+          "validity": {
+            "type": "integer",
+            "format": "int64",
+            "example": 3600,
+            "description": "Строк дії в секундах, за замовчуванням рахунок перестає бути дійсним через 24 години"
+          }
+        }
+      },
+      "SubscriptionCreateResponse": {
+        "type": "object",
+        "required": [
+          "subscriptionId",
+          "pageUrl"
+        ],
+        "properties": {
+          "subscriptionId": {
+            "type": "string",
+            "example": "s2_AbrCdXyZ13",
+            "description": "Інвойс підписки"
+          },
+          "pageUrl": {
+            "type": "string",
+            "example": "https://pay.mbnk.biz/s2_AbrCdXyZ13",
+            "description": "Посилання на сторінку оплати регулярного платежу"
+          }
+        }
+      },
+      "SubscriptionStatusResponse": {
+        "type": "object",
+        "required": [
+          "subscriptionId",
+          "status",
+          "startDate",
+          "amount",
+          "ccy",
+          "interval",
+          "summary",
+          "walletData"
+        ],
+        "properties": {
+          "subscriptionId": {
+            "type": "string",
+            "example": "s2_AbrCdXyZ13",
+            "description": "Id регулярного платежу"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "cancelled"
+            ],
+            "example": "active",
+            "description": "Статус підписки"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-06-01T14:15:22Z",
+            "description": "Дата першого списання"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-06-20T09:30:15Z",
+            "description": "Дата коли регулярний платіж скасували"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума"
+          },
+          "ccy": {
+            "type": "integer",
+            "format": "int32",
+            "example": 980,
+            "description": "Валюта ISO 4217 код валюти"
+          },
+          "interval": {
+            "type": "string",
+            "example": "1m",
+            "description": "Період регулярності"
+          },
+          "nextChargeDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-07-01T14:15:22Z",
+            "description": "Дата наступного списання"
+          },
+          "cancellationDesc": {
+            "type": "string",
+            "example": "Скасовано за запитом користувача",
+            "description": "Текст помилки"
+          },
+          "summary": {
+            "type": "object",
+            "required": [
+              "totalPaid",
+              "totalFailed"
+            ],
+            "properties": {
+              "totalPaid": {
+                "type": "integer",
+                "example": 3,
+                "description": "Кількість успішних списань"
+              },
+              "totalFailed": {
+                "type": "integer",
+                "example": 1,
+                "description": "Кількість неуспішних списань"
+              }
+            }
+          },
+          "walletData": {
+            "type": "object",
+            "required": [
+              "cardToken",
+              "walletId",
+              "status"
+            ],
+            "properties": {
+              "cardToken": {
+                "type": "string",
+                "example": "67XZtXdR4NpKU3",
+                "description": "Токен картки"
+              },
+              "walletId": {
+                "type": "string",
+                "description": "Ідентифікатор гаманця покупця",
+                "example": "c1376a611e17b059aeaf96b73258da9c"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "new",
+                  "created",
+                  "failed"
+                ],
+                "example": "created",
+                "description": "Статус токенізації картки:\n\n  `new` - прийнято заявку на токенізацію\n\n  `created` - картку успішно токенізовано\n\n  `failed` - картку не вдалось токенізувати\n"
+              },
+              "failureDescription": {
+                "type": "string",
+                "example": "Недостатньо коштів на картці",
+                "description": "Причина, з якої картку не вдалось токенізувати"
+              }
+            }
+          }
+        }
+      },
+      "SubscriptionRemoveRequest": {
+        "type": "object",
+        "required": [
+          "subscriptionId"
+        ],
+        "properties": {
+          "subscriptionId": {
+            "type": "string",
+            "example": "s2_AbrCdXyZ13",
+            "description": "Id підписки"
+          }
+        }
+      },
+      "SubscriptionEditRequest": {
+        "type": "object",
+        "required": [
+          "subscriptionId",
+          "action"
+        ],
+        "properties": {
+          "refundAmount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума для повернення. Якщо вказана сума, то робимо повернення на вказану суму. Якщо параметр не передано, то повернення не робимо.\n"
+          },
+          "subscriptionId": {
+            "type": "string",
+            "example": "s2_AbrCdXyZ13",
+            "description": "Ідентифікатор підписки"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "cancel"
+            ],
+            "example": "cancel",
+            "description": "Дія над підпискою (поки тільки одна дія - cancel)"
+          }
+        }
+      },
+      "SubscriptionPaymentsResponse": {
+        "type": "object",
+        "required": [
+          "payments",
+          "pagination"
+        ],
+        "properties": {
+          "payments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "amount",
+                "status",
+                "chargedAt",
+                "ccy"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "integer",
+                  "format": "int64",
+                  "example": 4200,
+                  "description": "Сума"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "success",
+                    "failed"
+                  ],
+                  "example": "success",
+                  "description": "Статус платежу"
+                },
+                "chargedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2024-06-01T14:15:22Z",
+                  "description": "Дата коли було списання"
+                },
+                "ccy": {
+                  "type": "integer",
+                  "format": "int32",
+                  "example": 980,
+                  "description": "ISO 4217 код валюти"
+                }
+              }
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "required": [
+              "totalItems",
+              "itemsPerPage",
+              "currentPage",
+              "totalPages"
+            ],
+            "properties": {
+              "totalItems": {
+                "type": "integer",
+                "example": 10,
+                "description": "Загальна кількість елементів у вибірці"
+              },
+              "itemsPerPage": {
+                "type": "integer",
+                "example": 20,
+                "description": "Кількість елементів на одній сторінці"
+              },
+              "currentPage": {
+                "type": "integer",
+                "example": 1,
+                "description": "Номер поточної сторінки"
+              },
+              "totalPages": {
+                "type": "integer",
+                "example": 1,
+                "description": "Загальна кількість сторінок"
+              }
+            }
+          }
+        }
+      },
+      "SubscriptionsListResponse": {
+        "type": "object",
+        "required": [
+          "pagination"
+        ],
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "subscriptionId",
+                "amount",
+                "interval",
+                "startDate",
+                "created",
+                "status"
+              ],
+              "properties": {
+                "subscriptionId": {
+                  "type": "string",
+                  "example": "s2_AbrCdXyZ13",
+                  "description": "Id підписки"
+                },
+                "amount": {
+                  "type": "integer",
+                  "format": "int64",
+                  "example": 4200,
+                  "description": "Сума підписки"
+                },
+                "interval": {
+                  "type": "string",
+                  "example": "1m",
+                  "description": "{число}{одиниця}, приклади: \"1d\" - кожен день, \"2w\" - кожні 2 тижні, \"1m\" - кожен місяць, \"1y\" - раз на рік"
+                },
+                "startDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2024-06-01T14:15:22Z",
+                  "description": "Дата початку підписки"
+                },
+                "created": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2024-05-30T12:10:05Z",
+                  "description": "Дата створення підписки"
+                },
+                "nextChargeDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2024-07-01T14:15:22Z",
+                  "description": "Наступна дата списання"
+                },
+                "endDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2024-09-01T14:15:22Z",
+                  "description": "Дата закінчення підписки"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "cancelled"
+                  ],
+                  "example": "active",
+                  "description": "Статус підписки"
+                }
+              }
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "required": [
+              "totalItems",
+              "itemsPerPage",
+              "currentPage",
+              "totalPages"
+            ],
+            "properties": {
+              "totalItems": {
+                "type": "integer",
+                "example": 5,
+                "description": "Загальна кількість елементів у вибірці"
+              },
+              "itemsPerPage": {
+                "type": "integer",
+                "example": 20,
+                "description": "Кількість елементів на одній сторінці"
+              },
+              "currentPage": {
+                "type": "integer",
+                "example": 1,
+                "description": "Номер поточної сторінки"
+              },
+              "totalPages": {
+                "type": "integer",
+                "example": 1,
+                "description": "Загальна кількість сторінок"
+              }
+            }
+          }
+        }
+      },
+      "TooManyRequestsError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "TMR",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `TMR` - занадто багато запитів, потрібно почекати, перш ніж робити новий запит\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "too many requests",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      },
+      "BadRequestError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "BAD_REQUEST",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `BAD_REQUEST` - запит некоректний, потрібно виправити параметри запиту та спробувати ще раз;\n\n  `1001` - запит некоректний, потрібно виправити параметри запиту та спробувати ще раз;\n\n  `INVALID_MERCHANT_PAYM_INFO` - некоректне значення в обʼєкті `merchantPaymInfo`; при створенні рахунку, оплатах за токеном та оплаті за реквізитами;\n\n  `ORDER_IN_PROGRESS` - сума, встановлена на qr-касу вже в процесі оплати, тому при спробі видалити суму оплати буде помилка;\n\n  `HOLD_INVOICE_NOT_FINALIZED` - рахунок створено з `paymentType=hold`, сплачено, але ще не фіналізовано; повертається при спробі отримати розширену інформацію про успішну оплату;\n\n  `WRONG_CANCEL_AMOUNT` - при спробі скасування оплати було вказано невірну суму або цю оплату вже було скасовано;\n\n  `TOKEN_NOT_FOUND` - токен картки, який було вказано в запиті, не знайдено;\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "empty 'invoiceId'",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      },
+      "MethodNotAllowedError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "METHOD_NOT_ALLOWED",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `METHOD_NOT_ALLOWED` - некоректний [http-метод](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods);\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "Method not allowed",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      },
+      "InternalServerError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "INTERNAL_ERROR",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `INTERNAL_ERROR` - обробка запиту завершилася непередбаченою помилкою;\n\n  `CANCEL_NOT_AVAILABLE` - неможливо скасувати оплату; дана помилка повертається при спробі скасування оплати;\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "internal server error",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      },
+      "NotFoundError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "NOT_FOUND",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `NOT_FOUND` - пошук за одним із параметрів запиту завершився неуспішно;\n\n  `1004` - пошук за одним із параметрів запиту завершився неуспішно;\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "invalid 'qrId'",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Приклади верифікації підпису webhook",
+      "description": "<details>\n  <summary>Go</summary>\n\n  ```go\n\n  package main\n\n  import (\n    \"crypto/ecdsa\"\n    \"crypto/sha256\"\n    \"crypto/x509\"\n    \"encoding/base64\"\n    \"encoding/pem\"\n    \"log\"\n  )\n\n  var (\n    // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n    pubKeyBase64 = `LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==`\n\n    // value from X-Sign header in webhook request\n    xSignBase64 = `MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=`\n\n    // webhook request body bytes\n    bodyBytes = []byte(`{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }`)\n  )\n\n  func main() {\n    pubKeyBytes, err := base64.StdEncoding.DecodeString(pubKeyBase64)\n    if err != nil {\n        panic(err)\n\n    }\n\n    signatureBytes, err := base64.StdEncoding.DecodeString(xSignBase64)\n    if err != nil {\n        panic(err)\n    }\n\n    block, _ := pem.Decode(pubKeyBytes)\n    if block == nil {\n        panic(\"invalid pem\")\n    }\n\n    genericPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)\n    if err != nil {\n        panic(err)\n    }\n\n    pubKey, ok := genericPubKey.(*ecdsa.PublicKey)\n    if !ok {\n        panic(\"invalid key\")\n    }\n\n    hash := sha256.Sum256(bodyBytes)\n\n    ok = ecdsa.VerifyASN1(pubKey, hash[:], signatureBytes)\n    if !ok {\n        panic(\"invalid X-Sign\")\n    }\n\n    log.Println(\"OK\")\n  }\n  ```\n</details>\n<details>\n  <summary>Python</summary>\n\n  ```python\n\n  import base64\n  import hashlib\n\n  import ecdsa\n\n  # example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  pub_key_base64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\"\n\n  # value from X-Sign header in webhook request\n  x_sign_base64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\"\n\n  # webhook request body bytes\n  body_bytes = b'''{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }'''\n\n  if __name__ == '__main__':\n      pub_key_bytes = base64.b64decode(pub_key_base64)\n      signature_bytes = base64.b64decode(x_sign_base64)\n      pub_key = ecdsa.VerifyingKey.from_pem(pub_key_bytes.decode())\n\n      ok = pub_key.verify(signature_bytes, body_bytes, sigdecode=ecdsa.util.sigdecode_der, hashfunc=hashlib.sha256)\n      if ok:\n          print(\"OK\")\n      else:\n          print(\"NOT OK\")\n  ```\n</details>\n<details>\n  <summary>Php</summary>\n\n  ```php\n\n  <?php\n\n  // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  $pubKeyBase64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\";\n\n  // value from X-Sign header in webhook request\n  $xSignBase64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\";\n\n  $message = '{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }';\n\n  $signature = base64_decode($xSignBase64);\n  $publicKey = openssl_get_publickey(base64_decode($pubKeyBase64));\n\n  $result = openssl_verify($message, $signature, $publicKey, OPENSSL_ALGO_SHA256);\n\n  echo $result === 1 ? \"OK\" : \"NOT OK\";\n  ```\n</details>\n<details>\n  <summary>NodeJs</summary>\n\n  ```javascript\n\n  const crypto = require('crypto');\n\n  // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  let pubKeyBase64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\";\n\n  // value from X-Sign header in webhook request\n  let xSignBase64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\";\n\n  let message = `{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }`\n\n  let signatureBuf = Buffer.from(xSignBase64, 'base64');\n  let publicKeyBuf = Buffer.from(pubKeyBase64, 'base64');\n\n  let verify = crypto.createVerify('SHA256');\n\n  verify.write(message);\n  verify.end();\n\n  let result = verify.verify(publicKeyBuf, signatureBuf);\n\n  console.log(result === true ? \"OK\" : \"NOT OK\");\n  ```\n</details>\n"
+    },
+    {
+      "name": "Помилки в процесі оплати",
+      "description": "<details>\n  <summary>Помилки в процесі оплати</summary>\n  <table>\n    <tr>\n      <th>errCode з вебхуку або Статусу рахунку</th>\n      <th>Текст помилки</th>\n      <th>Куди звернутися</th>\n    </tr>\n    <tr>\n      <td>6</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>40</td>\n      <td>Карта втрачена. Витрати обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>41</td>\n      <td>Карта втрачена. Витрати обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>50</td>\n      <td>Витрати по карті обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>51</td>\n      <td>У картки, з якої ви намагаєтеся зробити переказ, закінчився строк дії</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>52</td>\n      <td>Номер картки вказано невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>54</td>\n      <td>Стався технічний збій</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>55</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>56</td>\n      <td>Тип карти не підтримує подібні оплати</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>57</td>\n      <td>Транзакція не підтримується</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>58</td>\n      <td>Витрати по карті обмежені на покупку</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>58</td>\n      <td>Витрати по карті обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>59</td>\n      <td>На картці недостатньо коштів для завершення покупки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>60</td>\n      <td>На картці перевищено ліміт кількості видаткових операцій</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>61</td>\n      <td>На картці перевищено інтернет-ліміт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>62</td>\n      <td>Досягнуто або перевищено ліміт на кількість неправильних вводів PIN-коду</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>63</td>\n      <td>На картці перевищено інтернет-ліміт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>67</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>68</td>\n      <td>Відмова в проведені операції з боку МПС</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>71</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>72</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>73</td>\n      <td>Помилка маршрутизації</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>74</td>\n      <td>Помилка налаштувань торгівельної точки. )</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>75</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>80</td>\n      <td>Неправильний CVV код (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>81</td>\n      <td>Неправильний CVV2 код (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>82</td>\n      <td>Транзакція не дозволена з такими умовами проведення</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>82</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>83</td>\n      <td>Перевищені ліміти спроб оплати з карт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>84</td>\n      <td>Неправильне значення перевірочного числа 3D Secure Cardholder Authentication Verification Value</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>98</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1000</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1005</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1010</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1014</td>\n      <td>Для проведення оплати потрібно вказати повні реквізити карти</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>1034</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1035</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1036</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1044</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1045</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1053</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1054</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1056</td>\n      <td>Переказ можливий тільки на картку українського банку</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1064</td>\n      <td>Оплата можлива лише з використанням карток Mastercard або Visa</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1066</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1077</td>\n      <td>Сума оплати менша ніж допустима сума (налаштування МПС)</td>\n      <td>API</td>\n    </tr>\n    <tr>\n      <td>1080</td>\n      <td>Термін дії карти вказаний невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1090</td>\n      <td>Інформація про клієнта не знайдена</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1115</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1121</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1145</td>\n      <td>Мінімальна сума переказу</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1165</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1187</td>\n      <td>Треба вказати імя отримувача </td>\n      <td>API</td>\n    </tr>\n    <tr>\n      <td>1193</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1194</td>\n      <td>Цей спосіб поповнення працює тільки з картами інших банків</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1200</td>\n      <td>Обов'язкова наявність CVV коду (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1405</td>\n      <td>Платіжна система обмежила перекази</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1406</td>\n      <td>Карта заблокована риск-менеджемнтом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1407</td>\n      <td>Операцію заблоковано ризик-менеджментом</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1408</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1411</td>\n      <td>Цей вид операцій з гривневих карток тимчасово обмежений</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1413</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1419</td>\n      <td>Термін дії карти вказаний невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1420</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1421</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1422</td>\n      <td>Виникла помилка на етапі 3-D Secure)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1425</td>\n      <td>Виникла помилка на етапі 3-D Secure)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1428</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1429</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1433</td>\n      <td>Перевірте імʼя та прізвище отримувача. У випадку зазначення недостовірних даних, банк може відхилити переказ</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1436</td>\n      <td>Кацапське гівно не обслуговуємо</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1439</td>\n      <td>Недопустима операція для використання за програмою єВідновлення</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1458</td>\n      <td>Операция відхилена на кроці 3DS</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>8001</td>\n      <td>Минув термін дії посилання на оплату</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>8002</td>\n      <td>Клієнт відмінив оплату</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>8003</td>\n      <td>Стався технічний збій</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>8004</td>\n      <td>Проблеми з проведенням 3-D Secure </td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>8005</td>\n      <td>Ой, ой, перевищено ліміти на прийом оплат</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>8006</td>\n      <td>Ой, ой, перевищено ліміти на прийом оплат</td>\n      <td>monobank</td>\n    </tr>\n  </table>\n</details>\n"
+    }
+  ]
+}

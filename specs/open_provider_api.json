@@ -1,0 +1,1297 @@
+{
+  "openapi": "3.0.3",
+  "servers": [
+    {
+      "url": "https://api.monobank.ua"
+    }
+  ],
+  "info": {
+    "title": "Monobank open API for providers",
+    "version": "v2303",
+    "description": "API для отримання інформації про стан рахунків клієнтів та виписок по ним, а також загальної інформації про банк для розробників інших сервісів.\n\nAPI дозволяє ідентифікувати користувача банку та надати токен для отримання інформація по окремому клієнту.\nДля отримання доступу необхідно створити заявку на авторизацію. Цей процес необхідний для забезпечення безпеки клієнтських даних.\n\nТільки після надання компанії доступів до API клієнт матиме змогу авторизуватися за допомогою свого токена monobank у сервісі цієї компанії.\n\nЯкщо у вас є запитання щодо роботи API, запрошуємо до ком'юніті у [Telegram-каналі](https://t.me/joinchat/FiAEWhDf-QzTqM4wzEtffw)\nAPI недоступне для клієнтів до 16 років, дані за дитячими рахунами доступні з батьківського акаунту.",
+    "x-logo": {
+      "url": "logo.png",
+      "altText": "logo"
+    }
+  },
+  "paths": {
+    "/bank/currency": {
+      "get": {
+        "tags": [
+          "Публічні дані"
+        ],
+        "summary": "Отримання курсів валют",
+        "description": "Отримати базовий перелік курсів валют monobank. Інформація кешується та оновлюється не частіше 1 разу на 5 хвилин.",
+        "responses": {
+          "200": {
+            "description": "Інформація про курс валют",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyInfo"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personal/auth/registration": {
+      "post": {
+        "tags": [
+          "Авторизація та налаштування компанії"
+        ],
+        "summary": "Створення заявки",
+        "description": "Створення заявки на авторизацію компанії банком",
+        "parameters": [
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Результат створення заявки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personal/auth/registration/status": {
+      "post": {
+        "tags": [
+          "Авторизація та налаштування компанії"
+        ],
+        "summary": "Статус заявки",
+        "description": "Отримання статусу заявки на авторизацію компанії банком",
+        "parameters": [
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Статус заявки на авторизацію компанії",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personal/corp/webhook": {
+      "post": {
+        "tags": [
+          "Авторизація та налаштування компанії"
+        ],
+        "summary": "Встановлення вебхуку",
+        "description": "Встановлення вебхуку для отримання оновлень щодо платежів клієнтів",
+        "parameters": [
+          {
+            "name": "X-Key-Id",
+            "in": "header",
+            "required": true,
+            "description": "ID ключа сервісу",
+            "schema": {
+              "type": "string",
+              "example": "28a75537175a018645e6f8b14be7681791e701e0"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": true,
+            "description": "Request id",
+            "schema": {
+              "type": "string",
+              "example": "uLkwh3NzFAfEkj7urj5C7AU_"
+            }
+          },
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Вебхук успішно встановлено або видалено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personal/corp/settings": {
+      "get": {
+        "tags": [
+          "Авторизація та налаштування компанії"
+        ],
+        "summary": "Інформація про компанію",
+        "description": "Дані компанії",
+        "parameters": [
+          {
+            "name": "X-Key-Id",
+            "in": "header",
+            "required": true,
+            "description": "ID ключа сервісу",
+            "schema": {
+              "type": "string",
+              "example": "28a75537175a018645e6f8b14be7681791e701e0"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": true,
+            "description": "Request id",
+            "schema": {
+              "type": "string",
+              "example": "uLkwh3NzFAfEkj7urj5C7AU_"
+            }
+          },
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Дані компанії",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personal/auth/request": {
+      "post": {
+        "tags": [
+          "Клієнтські персональні дані"
+        ],
+        "summary": "Ініціалізія доступу",
+        "description": "Створення запиту на доступ до клієнтських даних",
+        "parameters": [
+          {
+            "name": "X-Key-Id",
+            "in": "header",
+            "required": true,
+            "description": "ID ключа сервісу",
+            "schema": {
+              "type": "string",
+              "example": "28a75537175a018645e6f8b14be7681791e701e0"
+            }
+          },
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          },
+          {
+            "name": "X-Callback",
+            "in": "header",
+            "required": false,
+            "description": "URL колбека, який буде запрошено сервісом, коли клієнт підтвердить надання доступу (GET запит з хедером X-Request-Id)",
+            "schema": {
+              "type": "string",
+              "example": "https://example.com/some_random_data_for_security"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Інформація про новий запит",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Клієнтські персональні дані"
+        ],
+        "summary": "Перевірка доступу",
+        "description": "Перевірка статусу запиту на доступ до клієнтських даних",
+        "parameters": [
+          {
+            "name": "X-Key-Id",
+            "in": "header",
+            "required": true,
+            "description": "ID ключа сервісу",
+            "schema": {
+              "type": "string",
+              "example": "28a75537175a018645e6f8b14be7681791e701e0"
+            }
+          },
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": true,
+            "description": "Request id",
+            "schema": {
+              "type": "string",
+              "example": "uLkwh3NzFAfEkj7urj5C7AU_"
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | X-Request-Id | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request is unauthorized yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request is not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personal/client-info": {
+      "get": {
+        "tags": [
+          "Клієнтські персональні дані"
+        ],
+        "summary": "Інформація про клієнта",
+        "description": "Отримання інформації про клієнта та переліку його рахунків",
+        "parameters": [
+          {
+            "name": "X-Key-Id",
+            "in": "header",
+            "required": true,
+            "description": "ID ключа сервісу",
+            "schema": {
+              "type": "string",
+              "example": "28a75537175a018645e6f8b14be7681791e701e0"
+            }
+          },
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": true,
+            "description": "Request id",
+            "schema": {
+              "type": "string",
+              "example": "uLkwh3NzFAfEkj7urj5C7AU_"
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | X-Request-Id | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statement list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request is unauthorized yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data is not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personal/statement/{account}/{from}/{to}": {
+      "get": {
+        "tags": [
+          "Клієнтські персональні дані"
+        ],
+        "summary": "Виписка",
+        "description": "Отримання виписки за час від {from} до {to} часу в секундах в форматі Unix time. Максимальний час, за який можливо отримати виписку — 31 доба + 1 година (2682000 секунд).\n\nОбмеження на використання функції — не частіше ніж 1 раз на 60 секунд.\n\nПовертає 500 транзакцій з кінця, тобто від часу to до from. Якщо кількість транзакцій = 500, потрібно зробити ще один запит, зменшивши час to до часу останнього платежу, з відповіді. Якщо знову кількість транзакцій = 500, то виконуєте запити до того часу, поки кількість транзакцій не буде < 500. Відповідно, якщо кількість транзакцій < 500, то вже отримано всі платежі за вказаний період.",
+        "parameters": [
+          {
+            "name": "X-Key-Id",
+            "in": "header",
+            "required": true,
+            "description": "ID ключа сервісу",
+            "schema": {
+              "type": "string",
+              "example": "28a75537175a018645e6f8b14be7681791e701e0"
+            }
+          },
+          {
+            "name": "X-Time",
+            "in": "header",
+            "required": true,
+            "description": "Поточний час у секундах (UTC)",
+            "schema": {
+              "type": "string",
+              "example": 1554466347
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": true,
+            "description": "Request id",
+            "schema": {
+              "type": "string",
+              "example": "uLkwh3NzFAfEkj7urj5C7AU_"
+            }
+          },
+          {
+            "name": "X-Sign",
+            "in": "header",
+            "required": true,
+            "description": "Sign (X-Time | X-Request-Id | URL)",
+            "schema": {
+              "type": "string",
+              "example": "K3cBBrlCJkei0/7zlP0L60zsNZgUFeC36r8ERmGvU/sxXspcy9G5B/Qq79AvzEakRKlNk1WcvkOgBcWf3DOyDQ=="
+            }
+          },
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "description": "Account id (client card id), 0 - default UAH",
+            "schema": {
+              "type": "string",
+              "example": 0
+            }
+          },
+          {
+            "name": "from",
+            "description": "Statement start time",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": 1546304461
+            }
+          },
+          {
+            "name": "to",
+            "description": "Statement end time (if not exist, will be using current time)",
+            "in": "path",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": 1546306461
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statement list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementItems"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request is unauthorized yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data is not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TokenRequest": {
+        "type": "object",
+        "description": null,
+        "properties": {
+          "tokenRequestId": {
+            "description": "ID токена доступу",
+            "type": "string",
+            "example": "uLkwh3NzFAfEkj7urj5C7AU_"
+          },
+          "acceptUrl": {
+            "description": "URL який потрібно відобразити клієнту у вигляді QR або редиректнути на сторінку, якщо клієнт використовує смартфон/планшет",
+            "type": "string",
+            "example": "https://mbnk.app/auth/uLkwh3NzFAfEkj7urj5C7AU_"
+          }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "description": "Опис клієнта та його рахунків. Якщо клієнт не надав права читати його персональні данні, повернеться тільки перелік рахунків.",
+        "properties": {
+          "clientId": {
+            "description": "Ідентифікатор клієнта (зівпадає з id для send.monobank.ua)",
+            "type": "string",
+            "example": "3MSaMMtczs"
+          },
+          "name": {
+            "description": "Ім'я клієнта",
+            "type": "string",
+            "example": "Мазепа Іван"
+          },
+          "webHookUrl": {
+            "description": "URL для надсиляння подій по зміні балансу рахунку",
+            "type": "string",
+            "example": "https://mysomesite.copm/some_random_data_for_security"
+          },
+          "permissions": {
+            "description": "Перелік прав, які які надає сервіс (1 літера на 1 permission).",
+            "type": "string",
+            "example": "psf"
+          },
+          "accounts": {
+            "type": "array",
+            "description": "Перелік доступних рахунків",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Ідентифікатор рахунку",
+                  "example": "kKGVoZuHWzqVoZuH"
+                },
+                "sendId": {
+                  "type": "string",
+                  "description": "Ідентифікатор для сервісу https://send.monobank.ua/{sendId}",
+                  "example": "uHWzqVoZuH"
+                },
+                "balance": {
+                  "type": "number",
+                  "format": "int64",
+                  "description": "Баланс рахунку в мінімальних одиницях валюти (копійках, центах)",
+                  "example": 10000000
+                },
+                "creditLimit": {
+                  "type": "number",
+                  "format": "int64",
+                  "description": "Кредитний ліміт",
+                  "example": 10000000
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Тип рахунку",
+                  "enum": [
+                    "black",
+                    "white",
+                    "platinum",
+                    "iron",
+                    "fop",
+                    "yellow",
+                    "eAid"
+                  ],
+                  "example": "black"
+                },
+                "currencyCode": {
+                  "type": "number",
+                  "format": "int32",
+                  "description": "Код валюти рахунку відповідно ISO 4217",
+                  "example": 980
+                },
+                "cashbackType": {
+                  "type": "string",
+                  "description": "Тип кешбеку який нараховується на рахунок",
+                  "enum": [
+                    "None",
+                    "UAH",
+                    "Miles"
+                  ],
+                  "example": "UAH"
+                },
+                "maskedPan": {
+                  "type": "array",
+                  "description": "Перелік замаскованних номерів карт (більше одного може бути у преміальних карт)",
+                  "example": [
+                    "537541******1234"
+                  ]
+                },
+                "iban": {
+                  "type": "string",
+                  "description": "IBAN рахунку",
+                  "example": "UA733220010000026201234567890"
+                }
+              }
+            }
+          }
+        }
+      },
+      "StatementItems": {
+        "type": "array",
+        "description": "Перелік транзакцій за вказанний час",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "ZuHWzqkKGVo=",
+              "description": "Унікальний id транзакції"
+            },
+            "time": {
+              "type": "number",
+              "format": "int64",
+              "example": 1554466347,
+              "description": "Час транзакції в секундах в форматі Unix time"
+            },
+            "description": {
+              "type": "string",
+              "example": "Покупка щастя",
+              "description": "Опис транзакцій"
+            },
+            "mcc": {
+              "type": "number",
+              "format": "int32",
+              "example": 7997,
+              "description": "Код типу транзакції (Merchant Category Code), відповідно ISO 18245"
+            },
+            "originalMcc": {
+              "type": "number",
+              "format": "int32",
+              "example": 7997,
+              "description": "Оригінальний код типу транзакції (Merchant Category Code), відповідно ISO 18245"
+            },
+            "hold": {
+              "type": "boolean",
+              "example": false,
+              "description": "Статус блокування суми (детальніше у [wiki](https://en.wikipedia.org/wiki/Authorization_hold))"
+            },
+            "amount": {
+              "type": "number",
+              "format": "int64",
+              "example": -95000,
+              "description": "Сума у валюті рахунку в мінімальних одиницях валюти (копійках, центах)"
+            },
+            "operationAmount": {
+              "type": "number",
+              "format": "int64",
+              "example": -95000,
+              "description": "Сума у валюті транзакції в мінімальних одиницях валюти (копійках, центах)"
+            },
+            "currencyCode": {
+              "type": "number",
+              "format": "int32",
+              "example": 980,
+              "description": "Код валюти рахунку відповідно ISO 4217"
+            },
+            "commissionRate": {
+              "type": "number",
+              "format": "int64",
+              "example": 0,
+              "description": "Розмір комісії в мінімальних одиницях валюти (копійках, центах)"
+            },
+            "cashbackAmount": {
+              "type": "number",
+              "format": "int64",
+              "example": 19000,
+              "description": "Розмір кешбеку в мінімальних одиницях валюти (копійках, центах)"
+            },
+            "balance": {
+              "type": "number",
+              "format": "int64",
+              "example": 10050000,
+              "description": "Баланс рахунку в мінімальних одиницях валюти (копійках, центах)"
+            },
+            "comment": {
+              "type": "string",
+              "example": "За каву",
+              "description": "Коментар до переказу, уведений користувачем. Якщо не вказаний, поле буде відсутнім"
+            },
+            "receiptId": {
+              "type": "string",
+              "example": "XXXX-XXXX-XXXX-XXXX",
+              "description": "Номер квитанции для check.gov.ua. Поле може бути відсутнім"
+            },
+            "counterEdrpou": {
+              "type": "string",
+              "example": "3096889974",
+              "description": "ЄДРПОУ контрагента, присутній лише для елементів виписки рахунків ФОП"
+            },
+            "counterIban": {
+              "type": "string",
+              "example": "UA898999980000355639201001404",
+              "description": "IBAN контрагента, присутній лише для елементів виписки рахунків ФОП"
+            },
+            "counterName": {
+              "type": "string",
+              "example": "ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ «ВОРОНА»",
+              "description": "Найменування контрагента"
+            }
+          }
+        }
+      },
+      "CurrencyInfo": {
+        "type": "array",
+        "description": "Перелік курсів. Кожна валютна пара може мати одне і більше полів з  rateSell, rateBuy, rateCross.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "currencyCodeA": {
+              "type": "number",
+              "format": "int32",
+              "example": 840
+            },
+            "currencyCodeB": {
+              "type": "number",
+              "format": "int32",
+              "example": 980
+            },
+            "date": {
+              "type": "number",
+              "format": "int64",
+              "example": 1552392228
+            },
+            "rateSell": {
+              "type": "number",
+              "format": "float",
+              "example": 27
+            },
+            "rateBuy": {
+              "type": "number",
+              "format": "float",
+              "example": 27.2
+            },
+            "rateCross": {
+              "type": "number",
+              "format": "float",
+              "example": 27.1
+            }
+          }
+        }
+      },
+      "RegistrationKeyRequest": {
+        "type": "object",
+        "required": [
+          "pubkey",
+          "name",
+          "description",
+          "contactPerson",
+          "phone",
+          "email",
+          "logo"
+        ],
+        "properties": {
+          "pubkey": {
+            "type": "string",
+            "description": "Файл PEM із відкритим ключем secp256k1 у форматі base64",
+            "example": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZZd0VBWUhLb1pJemow..."
+          },
+          "name": {
+            "type": "string",
+            "description": "Назва компанії",
+            "example": "ТОВ \"Ворона\""
+          },
+          "description": {
+            "type": "string",
+            "description": "Опис послуг компанії та мета використання апі",
+            "example": "Ми робимо найрозумніший PFM з усіх можливих і нам потрібен доступ до виписка користувача, щоб створювати красиву статистику"
+          },
+          "contactPerson": {
+            "type": "string",
+            "description": "Контактна особа",
+            "example": "Роман Шевченко"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Телефон контактної особи",
+            "example": "380671234567"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email контактної особи",
+            "example": "etс@example.com"
+          },
+          "logo": {
+            "type": "string",
+            "description": "Файл із зображенням логотипу компанії у форматі base64",
+            "example": "iVBORw0KGgoAAAANSUhEUgAAAUAAAACECAYAAADhnvK8AAAapElEQVR42..."
+          }
+        }
+      },
+      "RegistrationKeyResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Статус отримання заявки",
+            "example": "New"
+          }
+        }
+      },
+      "RegistrationStatusRequest": {
+        "type": "object",
+        "required": [
+          "pubkey"
+        ],
+        "properties": {
+          "pubkey": {
+            "type": "string",
+            "description": "Файл PEM із відкритим ключом secp256k1 у форматі base64",
+            "example": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZZd0VBWUhLb1pJemow..."
+          }
+        }
+      },
+      "RegistrationStatusResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "keyId"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Статус заявки (New | Declined | Approved)",
+            "example": "Approved"
+          },
+          "keyId": {
+            "type": "string",
+            "description": "ID ключа сервісу"
+          }
+        }
+      },
+      "SettingsResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "pubkey",
+          "name",
+          "permission",
+          "logo"
+        ],
+        "properties": {
+          "pubkey": {
+            "type": "string",
+            "description": "Файл PEM із відкритим ключем secp256k1 у форматі base64",
+            "example": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZZd0VBWUhLb1pJemow..."
+          },
+          "name": {
+            "type": "string",
+            "description": "Назва компанії",
+            "example": "Компанія"
+          },
+          "permission": {
+            "description": "Перелік прав, які які надає сервіс (1 літера на 1 permission).",
+            "type": "string",
+            "example": "psf"
+          },
+          "logo": {
+            "type": "string",
+            "description": "Файл із зображенням логотипу компанії у форматі base64",
+            "example": "iVBORw0KGgoAAAANSUhEUgAAAUAAAACECAYAAADhnvK8AAAapElEQVR42..."
+          },
+          "webhook": {
+            "type": "string",
+            "description": "Адреса для CallBack (POST) – на цю адресу будуть надісилатись дані по транзакціям",
+            "example": "https://example.com/mono/corp/webhook/maybesomegibberishuniquestringbutnotnecessarily"
+          }
+        }
+      },
+      "SetWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "webHookUrl": {
+            "type": "string",
+            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані по транзакціям. Під час виклику апі буде виконано тестовий POST-запит за цією адресою. Якщо на нього не буде відповіді 200 ОК, виклик апі завершиться помилкою.",
+            "example": "https://example.com/mono/corp/webhook/maybesomegibberishuniquestringbutnotnecessarily"
+          }
+        }
+      },
+      "EmptyResponse": {
+        "type": "object"
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "errorDescription": {
+            "type": "string",
+            "description": "Опис помилки"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Публічні дані",
+      "description": "Загальна інформація, що надається без авторизації."
+    },
+    {
+      "name": "Авторизація та налаштування компанії",
+      "description": "Доступ до клієнтських персональних даних надається тільки авторизованим банком компаніям. Для отримання доступу необхідно створити заявку на авторизацію, а також надати інформацію про сервіс."
+    },
+    {
+      "name": "Клієнтські персональні дані",
+      "description": "Інформація, що надається тільки за згодою клієнта та тільки авторизованим банком компаніям."
+    }
+  ]
+}

@@ -1,0 +1,2531 @@
+{
+  "openapi": "3.0.0",
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "info": {
+    "description": "# АПІ здійснення угоди з Покупки Частинами\nСхема взаємодії під час оплати в магазині:\n* Клієнт вибирає товар, який хоче придбати\n* Продавець формує кошик платежів клієнта\n* Касир оформлює Покупку Частинами для Клієнта\n* Магазин надсилає запит до банку, використовуючи сервіс [Подання заявки на оплату частинами](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--order--create)\n* Банк приймає заявку на створення платежу за програмою Покупка Частинами\n* Банк ухвалює рішення на оформлення розстрочки протягом 20 секунд і надсилає в мобільний застосунок Push клієнту з інформацією про розстрочку за програмою Покупка Частинами для підтвердження\n* Клієнт ознайомлюється з умовами розстрочки та підтверджує відкриття\n* Банк надсилає Магазину [відповідь(Callback)](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--order--state) з результатом оформлення клієнтом Покупки Частинами\n* Касир друкує чек\n* Магазин завершує замовлення\n* Магазин інформує банк про результат завершення операції\n  * [Проведено видачу товару клієнтові](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--order--confirm)\n  * [Товар клієнтові не видано](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--order--reject)\n\n## Поширені запитання\n\n * Коли магазин передає товар клієнтові?\n   * Після набуття статусу WAITING_FOR_STORE_CONFIRM\n   \n\n * Чи є готові модулі сервісу Покупка Частинами?\n   * Так, ми знаємо про кілька готових модулів, але звертаємо увагу, що модулі розроблені сторонніми розробниками та не підтримуються Банком.\n     Встановлення та використання на ваш страх та ризик. [opencard](https://opencartforum.com/files/file/6556-modul-platyozhnoy-sistemy-monobank-monobank-universal-bank/)\n <h3 id=\"auth\">Авторизація (підпис запитів / відповідей)</h3> Усі запити та відповіді до АПІ мають бути підписані.\nПідпис передається в `header` параметрі `signature`\nФормула підпису:\n\n```\nencodeBase64(\n   HmacSHA256(\n       getBytesUTF-8(\n           request_body\n       )\n   )\n)\n```\n\n* encodeBase64 — функція перетворення бінарних даних у Base64 формат  [wiki](https://ru.wikipedia.org/wiki/Base64),\n* HmacSHA256 — функція обчислення хешу підпису даних [wiki](https://ru.wikipedia.org/wiki/HMAC),\n* getBytesUTF-8 — функція переведення рядка в бінарний вигляд (у кодуванні UTF-8) [wiki](https://ru.wikipedia.org/wiki/UTF-8),\n* request_body — тіло запиту (або відповіді)\n\nПриклад підпису мовою `java`:\n\n```java\n\nimport javax.crypto.Mac;\nimport javax.crypto.spec.SecretKeySpec;\nimport javax.xml.bind.DatatypeConverter;\n\nclass Main {\n  public static void main(String[] args) throws Exception {\n    String key = \"the shared secret key here\";\n    String message = \"the message to hash here\";\n    \n    Mac hasher = Mac.getInstance(\"HmacSHA256\");\n    hasher.init(new SecretKeySpec(key.getBytes(), \"HmacSHA256\"));\n    \n    byte[] hash = hasher.doFinal(message.getBytes());\n    \n    // to base64\n    DatatypeConverter.printBase64Binary(hash);\n  }\n}\n```\n\nПриклад підпису на `bash`\n\n```bash\n\nreadonly PRIVATE_KEY='the shared secret key here'\nreadonly REQUEST='the message to hash here'\nSIGNATURE=$(echo -n \"$REQUEST\" | openssl dgst -sha256 -hmac \"$PRIVATE_KEY\" -binary | base64)\n\necho \"$SIGNATURE\"\n```\n\nПриклад підпису на `php`\n\n```php\n\n<?php\n\n$url = 'https://u2-demo-ext.mono.st4g3.com/api/order/create';\n$request_string = '{ \"store_order_id\": \"test_101\",\n  \"client_phone\": \"+380000000001\",\n  \"total_sum\": 1234.56,\n  \"invoice\": {\n    \"date\": \"2018-10-22\",\n    \"number\": \"1234-1234\",\n    \"point_id\": 1234,\n    \"source\": \"INTERNET\"\n  },\n  \"available_programs\": [\n    {\n      \"available_parts_count\": [\n        3,\n        4,\n        6,\n        9\n      ],\n      \"type\": \"payment_installments\"\n    }\n  ],\n  \"products\": [\n    {\n      \"name\": \"Телевизор\",\n      \"count\": 3,\n      \"sum\": 9999.99\n    }\n  ],\n  \"result_callback\": \"https://store-domain/handle/pay-part/result\"\n}';\n$signature = base64_encode(hash_hmac(\"sha256\", $request_string, \"secret_98765432--123-123\", true));\n\n$ch = curl_init();\ncurl_setopt($ch, CURLOPT_URL, $url);\ncurl_setopt($ch, CURLOPT_CUSTOMREQUEST, \"POST\");\ncurl_setopt($ch, CURLOPT_POSTFIELDS, $request_string);\ncurl_setopt($ch, CURLOPT_HTTPHEADER, array(\n    'store-id: test_store_with_confirm',\n    'signature: '.$signature,\n    'Content-Type: application/json',\n    'my-header: a66b0275-9872-4fa2-9489-d91b085495a4',\n    'Accept: application/json'\n));\n\n$server_output = curl_exec ($ch);\n\necho $ch;\necho $server_output;\n\ncurl_close ($ch);\n\n?>\n```\n\nПовний приклад мовою java виклику сервісу:\n\n```java\n\nimport javax.crypto.Mac;\nimport javax.crypto.spec.SecretKeySpec;\nimport java.io.*;\nimport java.net.HttpURLConnection;\nimport java.net.URL;\nimport java.nio.charset.StandardCharsets;\nimport java.security.InvalidKeyException;\nimport java.security.NoSuchAlgorithmException;\nimport java.util.Base64;\n\npublic class Main {\n\n    private static final String STORE_ID = \"test_store_with_confirm\";\n    private static final String STORE_SECRET = \"secret_98765432--123-123\";\n\n    public static void main(String[] args) throws Exception {\n        new Main().signAndMakeRequest();\n    }\n\n    private void signAndMakeRequest() throws Exception {\n        final String request = \"{\\\"phone\\\": \\\"+380000000001\\\"}\";\n        String sign = signRequest(request);\n\n        final String serviceUrl = \"https://u2-demo-ext.mono.st4g3.com/api/client/validate\";\n        URL url = new URL(serviceUrl);\n        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();\n        try {\n            urlConnection.addRequestProperty(\"store-id\", STORE_ID);\n            urlConnection.addRequestProperty(\"signature\", sign);\n            urlConnection.addRequestProperty(\"Content-Type\", \"application/json\");\n            urlConnection.addRequestProperty(\"Accept\", \"application/json\");\n            urlConnection.setDoOutput(true);\n            try (OutputStream outputStream = urlConnection.getOutputStream()) {\n                outputStream.write(request.getBytes(StandardCharsets.UTF_8));\n            }\n\n            int responseCode = urlConnection.getResponseCode();\n            String responseBody = readResponseBody(urlConnection);\n            System.out.println(\"Service response code: \" + responseCode + \". Response body: \" + responseBody);\n        } finally {\n            urlConnection.disconnect();\n        }\n    }\n\n    private String signRequest(String request) throws NoSuchAlgorithmException, InvalidKeyException {\n        final String ALGORITHM = \"HmacSHA256\";\n        Mac mac = Mac.getInstance(ALGORITHM);\n        mac.init(new SecretKeySpec(STORE_SECRET.getBytes(StandardCharsets.UTF_8), ALGORITHM));\n        byte[] hash = mac.doFinal(request.getBytes(StandardCharsets.UTF_8));\n        Base64.Encoder encoder = Base64.getEncoder();\n        byte[] base64Hash = encoder.encode(hash);\n        return new String(base64Hash, StandardCharsets.UTF_8);\n    }\n\n    private String readResponseBody(HttpURLConnection urlConnection) throws IOException {\n        try (InputStream inputStream = urlConnection.getInputStream();\n             InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);\n             StringWriter sw = new StringWriter()) {\n\n            char[] buffer = new char[256];\n            int n = 0;\n            while (-1 != (n = reader.read(buffer))) {\n                sw.write(buffer, 0, n);\n            }\n            return sw.toString();\n        }\n    }\n}\n```\n\n## Тестова платформа\nТестова платформа містить тільки 1 магазин і віддає тільки заздалегідь підготовлені ситуації.\nstore-id: `test_store_with_confirm`\nключ: `secret_98765432--123-123`\nlink: https://u2-demo-ext.mono.st4g3.com\n\nМожливі ситуації:\n * Успішне підтвердження заявки. Для цієї ситуації потрібно передати номер телефону клієнта, що закінчується на 1.\n У цьому випадку через 5 секунд буде кинуто callback про успішне затвердження заявки.\n * Заявка, що очікує підтвердження від клієнта. Для цієї ситуації необхідно передати номер телефону клієнта, що закінчується на 2.\n * Помилка підтвердження заявки через недостатній ліміт у клієнта.\n Для цієї ситуації потрібно передати номер телефону клієнта, що закінчується на 3.\n У цьому випадку через 5 секунд буде кинуто callback про відхилення заявки.\n * Заявка підтверджена клієнтом та очікує на підтвердження від магазину (тільки для магазину з двотактовим підтвердженням).\n Для цієї ситуації необхідно передати номер телефону клієнта, що закінчується на 4.\n \n \n## Предпрод\nТестування на передпроді включає в себе взаємодію API та мобільного застосунку монобанк.\nРекомендується після налаштування запитів на пісочниці.\n\nДля тестування на передпроді використовуйте:\n\nstore-id: `COMFY`  \nключ: `sign_key`  \nlink: https://u2-ext.mono.st4g3.com\n\nУвага: умови для заявки:\n\nномер телефону покупця +380951000001\nкількість частин - 10  \nперед тестуванням попередити REDACTED_NAME_SURNAME у телеграмі\n\n\n## Production\nБойове посилання: https://u2.monobank.com.ua\n\nВикористовуйте після успішного проходження тесту та отримання бойових ключів.\n\n\nКонтактні дані менеджерів і фахівців:\n\nменеджер проєкту: REDACTED_NAME_SURNAME\n\nemail: REDACTED_EMAIL\n\nоперативний контакт в telegram REDACTED_PHONE\n",
+    "version": "1.0.0",
+    "title": "Покупка частями (Monobank)"
+  },
+  "tags": [
+    {
+      "name": "Робота з заявками",
+      "description": "Основні сервіси АПІ Покупки Частинами"
+    },
+    {
+      "name": "сервіси для роботи фінансових брокерів",
+      "description": "Financial Broker Facade Controller"
+    }
+  ],
+  "paths": {
+    "/api/client/validate": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Валідація клієнта.",
+        "description": "З 15.09.2020 підтримка цього сервісу припиняється! Необхідно перейти на [новий метод](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--v2--client--validate).",
+        "operationId": "validateClientUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateClientResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ValidateClientRequest"
+        }
+      }
+    },
+    "/api/fin/broker/check/installment/availability": {
+      "post": {
+        "tags": [
+          "сервіси для роботи фінансових брокерів"
+        ],
+        "summary": "Сервіс перевірки доступності клієнтові ПЧ на цей товар",
+        "operationId": "checkInstallmentAvailabilityUsingPOST",
+        "parameters": [
+          {
+            "name": "broker-id",
+            "in": "header",
+            "description": "Ідентифікатор брокера",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallmentAvailabilityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallmentAvailabilityRequest"
+              }
+            }
+          },
+          "description": "request",
+          "required": true
+        }
+      }
+    },
+    "/api/order/check/paid": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання ознаки того, що заявка повністю оплачена",
+        "operationId": "checkInstallmentIsPaidUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckInstallmentsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RequestWithOrderIdentifier"
+        }
+      }
+    },
+    "/api/order/confirm": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Підтвердження видачі товару клієнтові",
+        "operationId": "confirmUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStateInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestWithOrderIdentifier"
+              }
+            }
+          },
+          "description": "request",
+          "required": true
+        }
+      }
+    },
+    "/api/order/create": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Подання заявки на оформлення Покупки Частинами",
+        "operationId": "createOrderUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Заявка принята в обработку",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Дубликат заявки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrderResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json;charset=UTF-8": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderRequest"
+              }
+            }
+          },
+          "description": "request",
+          "required": true
+        }
+      }
+    },
+    "/api/order/data": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання інформації про заявку. Актуальний метод",
+        "description": "Необов'язковий метод.<br/>\nЦей метод застосовується для отримання детальної інформації про створену заявку ПЧ та про проведені повернення.<br/>\nІнформація про повернення: буде передано дату та суму повернення за даною заявкою. Якщо таких повернень більше одного, то буде переданий масив даних з датою і сумою кожного повернення",
+        "operationId": "getOrderShortDataUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderShortInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RequestWithOrderIdentifier"
+        }
+      }
+    },
+    "/api/order/data/for/guarantee/letter": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання даних для гарантійного листа",
+        "description": "Приклад гарантійного листа: <br/>  \n\n```java\n<?xml version=\"1.0\"?>\n<guarantee>\n  <header>\n     <request_id>\"180702CM023453\"</request_id>\n     <answer_datetime>2018-07-02T12:05:10</answer_datetime>\n     <from_organization>\"Монобанк\"</from_organization>\n     <organization_id>\"11111111\"</organization_id>\n  </header>\n  <expansion>\n    <customer>\n      <last_name>\"Іванов\"</last_name>\n      <first_name>\"Василій\"</first_name>\n      <middle_name>\"Петрович\"</middle_name>\n      <doc_type>\"0\"</doc_type>\n      <doc_series>\"АК\"</doc_series>\n      <doc_number>\"548967\"</doc_number>\n      <doc_issued>\"Дніпровським РВ ДМУ УМВС у Дніпропетровській\n                  області\"</doc_issued>\n      <doc_date_of_issue>\"2000-05-12\"</doc_date_of_issue>\n      <inn>\"1234567890\"</inn>\n    </customer>\n    <invoice>\n       <invoice_number>\"СФGIT-0000000134\"</invoice_number>\n       <invoice_date>\"2018-07-02\"</invoice_date>\n       <invoice_amount>\"3500.00\"</invoice_amount>\n    </invoice>\n    <payment_destination>\n       <dest_id>\"36962487\"</dest_id>\n       <dest_name>\"ТОВ \\\"Рога и копыта\\\"\"</dest_name>\n       <dest_mfo>\"305299\"</dest_mfo>\n       <dest_bank_name>\"\\\"IBOX\\\"\"</dest_bank_name>\n       <dest_acc_number>\"26000000000\"</dest_acc_number>\n    </payment_destination>\n    <bank>\n       <agreement>\"КД-0001\"</agreement>\n       <agreement_date>\"20.07.2018\"</agreement_date>\n       <credit_amount>\"3500.00\"</credit_amount>\n       <product_types>\"БР\"</product_types>\n       <available_parts_count>\"7\"</available_parts_count>\n       <customer_pay_amount>\"0.00\"</customer_pay_amount>\n       <bank_id>\"21133352\"</bank_id>\n       <bank_name>\"ПАТ \\\"УНІВЕРСАЛ БАНК\\\"\"</bank_name>\n       <bank_executive>\"Петренко І.В.\"</bank_executive>\n     </bank>\n     <sign>12E0F76458C6D1E4</sign>\n     <stamp>1199A0F5E7C4A212</stamp>\n   </expansion>\n</guarantee>\n```\n\n\nЕлектронний цифровий підпис накладається на рядок, що складається шляхом конкатенації значень таких атрибутів відповіді:<br/>  \n`\"customer\".\"last_name\"`<br/>  \n`\"customer\".\"first_name\"`<br/>  \n`\"customer\".\"middle_name\"`<br/>  \n`\"customer\".\"doc_series\"`<br/>  \n`\"customer\".\"doc_number\"`<br/>  \n`\"customer\".\"doc_issued\"`<br/>  \n`\"customer\".\"doc_date_of_issue\"`<br/>  \n`\"customer\".\"inn\"`<br/>  \n`\"invoice\".\"invoice_number\"`<br/>  \n`\"invoice\".\"invoice_date\"`<br/>  \n`\"invoice\".\"invoice_amount\"`<br/>  \n`\"payment_destination\".\"dest_id\"`<br/>  \n`\"payment_destination\".\"dest_name\"`<br/>  \n`\"payment_destination\".\"dest_mfo\"`<br/>  \n`\"payment_destination\".\"dest_bank_name\"`<br/>  \n`\"payment_destination\".\"dest_acc_number\"`<br/>  \n`\"header\".\"answer_datetime\"`<br/>  \n`\"bank\".\"agreement\"`<br/>  \n`\"bank\".\"agreement_date\"`<br/>  \n`\"bank\".\"credit_amount\"`<br/>  \n`\"bank\".\"customer_pay_amount\"`<br/>  \n`\"bank\".\"bank_id\"`<br/>  \n`\"bank\".\"bank_name\"`<br/>  \n`\"bank\".\"bank_executive\"`<br/>  \n\nЗначення атрибутів мають бути перераховані саме у зазначеному порядку, без пробілів чи інших роздільників.\nЯкщо значення параметра відсутнє — замість нього підставляється порожній рядок",
+        "operationId": "getOrderDataUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderData"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OrderDataRequest"
+        }
+      }
+    },
+    "/api/order/guarantee/letter": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання гарантійного листа (PDF)",
+        "operationId": "getOrderContractUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OrderDataRequest"
+        }
+      }
+    },
+    "/api/order/info": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання інформації про заявку. Цей метод застарів. Прохання перейти на новий (/api/order/data)",
+        "operationId": "getOrderShortInfoUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderShortInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RequestWithOrderIdentifier"
+        }
+      }
+    },
+    "/api/order/reject": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Скасування заявки (Товар клієнтові не видано)",
+        "operationId": "rejectUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStateInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RequestWithOrderIdentifier"
+        }
+      }
+    },
+    "/api/order/return": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Повернення товару за заявкою (повне або часткове)",
+        "operationId": "returnOrderUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json;charset=UTF-8": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnRequest"
+              }
+            }
+          },
+          "description": "request",
+          "required": true
+        }
+      }
+    },
+    "/api/order/state": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання стану раніше створеної заявки на оформлення Покупки Частинами (Callback)",
+        "description": "Як це працює <br/> \n* Магазин надсилає запит на створення заявки на оформлення Покупки Частинами з передачею параметра result_callback <br/> \n* Після опрацювання операції Монобанком на сервер магазину буде надіслано запит POST що містить результат опрацювання запиту. Формат запиту буде аналогічний відповіді[сервісу перевірки станів](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--order--state) <br/> \n* Для перевірки справжності запиту із сервера Монобанку необхідно: <br/>  \n  * сформувати signature на боці вашого сервера, використовуючи отриманий від Монобанку запит. <br/>  \n  * отримане значення signature необхідно порівняти з отриманою з Callback від Монобанку <br/>  \n  * якщо signature ідентичні, то Ви отримали справжню відповідь від сервера Монобанку (не змінений третьою особою/без втручання третіх осіб) і можна продовжувати виконувати операцію, відповідно до отриманого статусу платежу. Для отримання поточного статусу транзакції до отримання фінального Callback, використовуйте API [сервісу перевірки станів](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--order--state), який можна виконувати в будь-який момент.\n\nСтатус | Суб-статус | Пояснення\n------------ | ------------- | -------------\nSUCCESS | ACTIVE | заявка успішна, товар передано клієнтові, гроші надіслано магазину. Фінальний статус за заявкою\nSUCCESS | DONE | заявка успішна, товар передано клієнтові, гроші надіслано магазину, ПЧ погашено клієнтом.\nSUCCESS | RETURNED | магазином прийнято повернення товару, гроші перераховано клієнтові\nIN_PROCESS | WAITING_FOR_CLIENT | очікування підтвердження від клієнта кредитного договору у застосунку монобанк\nIN_PROCESS | WAITING_FOR_STORE_CONFIRM | кредитна угода ПЧ підтверджена клієнтом. <font color=\"red\">Важливо!</font> Ключовий статус після отримання якого необхідно передати товар клієнтові\nFAIL | CLIENT_NOT_FOUND | Клієнта не знайдено. Варіанти: не є клієнтом монобанку; зазначено не фінансовий номер\nFAIL | EXCEEDED_SUM_LIMIT | Клієнт перевищив допустимий ліміт на ПЧ. Ліміт можна подивитися у застосунку монобанк у меню Розстрочка.\nFAIL | EXISTS_OTHER_OPEN_ORDER | У клієнта є інша відкрита заявка на ПЧ. Рішення: скасувати відкриту заявку у застосунку клієнтом чи магазином методом reject; почекати 15 хв, заявка перейде у статус CLIENT_PUSH_TIMEOUT\nFAIL | FAIL | Внутрішня помилка на боці Банку. Рекомендуємо повторити подання заявки через 5 хв.\nFAIL | NOT_ENOUGH_MONEY_FOR_INIT_DEBIT | Недостатньо коштів для першого списання. Рішення: поповнити картку монобанку на суму першого платежу\nFAIL | REJECTED_BY_CLIENT | Клієнт відмовився від здійснення купівлі\nFAIL | RESTRICTED_BY_RISKS | Потрібно звернутися до банку для отримання причини відмови у ПЧ\nFAIL | CLIENT_PUSH_TIMEOUT | Клієнт не ухвалив рішення щодо кредитного договору ПЧ у застосунку монобанку. Кредитний договір активний 15 хв. Рішення: зв'язатися з клієнтом; повторити заявку\nFAIL | REJECTED_BY_STORE | Магазин відмовився від продажу\n",
+        "operationId": "getOrderStateUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStateInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RequestWithOrderIdentifier"
+        }
+      }
+    },
+    "/api/store/report": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання звіту",
+        "operationId": "getDailyReportUsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "store-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyReportRequest"
+              }
+            }
+          },
+          "description": "request",
+          "required": true
+        }
+      }
+    },
+    "/api/v2/client/validate": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Валідація клієнта (версія 2)",
+        "operationId": "validateClientV2UsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateClientSimpleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ValidateClientRequest"
+        }
+      }
+    },
+    "/api/v2/order/data/for/guarantee/letter": {
+      "post": {
+        "tags": [
+          "Робота з заявками"
+        ],
+        "summary": "Отримання даних для гарантійного листа",
+        "description": "Приклад гарантійного листа: <br/>  \n\n```java\n<?xml version=\"1.0\"?>\n<guarantee>\n  <header>\n     <request_id>\"180702CM023453\"</request_id>\n     <answer_datetime>2018-07-02T12:05:10</answer_datetime>\n     <from_organization>\"Монобанк\"</from_organization>\n     <organization_id>\"11111111\"</organization_id>\n  </header>\n  <expansion>\n    <customer>\n      <last_name>\"Іванов\"</last_name>\n      <first_name>\"Василій\"</first_name>\n      <middle_name>\"Петрович\"</middle_name>\n      <doc_type>\"0\"</doc_type>\n      <doc_series>\"АК\"</doc_series>\n      <doc_number>\"548967\"</doc_number>\n      <doc_issued>\"Дніпровським РВ ДМУ УМВС у Дніпропетровській\n                  області\"</doc_issued>\n      <doc_date_of_issue>\"2000-05-12\"</doc_date_of_issue>\n      <inn>\"1234567890\"</inn>\n    </customer>\n    <invoice>\n       <invoice_number>\"СФGIT-0000000134\"</invoice_number>\n       <invoice_date>\"2018-07-02\"</invoice_date>\n       <invoice_amount>\"3500.00\"</invoice_amount>\n    </invoice>\n    <payment_destination>\n       <dest_id>\"36962487\"</dest_id>\n       <dest_name>\"ТОВ \\\"Рога и копыта\\\"\"</dest_name>\n       <dest_mfo>\"305299\"</dest_mfo>\n       <dest_bank_name>\"\\\"IBOX\\\"\"</dest_bank_name>\n       <dest_acc_number>\"26000000000\"</dest_acc_number>\n    </payment_destination>\n    <bank>\n       <agreement>\"КД-0001\"</agreement>\n       <agreement_date>\"20.07.2018\"</agreement_date>\n       <credit_amount>\"3500.00\"</credit_amount>\n       <product_types>\"БР\"</product_types>\n       <available_parts_count>\"7\"</available_parts_count>\n       <customer_pay_amount>\"0.00\"</customer_pay_amount>\n       <bank_id>\"21133352\"</bank_id>\n       <bank_name>\"ПАТ \\\"УНІВЕРСАЛ БАНК\\\"\"</bank_name>\n       <bank_executive>\"Петренко І.В.\"</bank_executive>\n     </bank>\n     <sign>12E0F76458C6D1E4</sign>\n     <stamp>1199A0F5E7C4A212</stamp>\n   </expansion>\n</guarantee>\n```\n\n\nЕлектронний цифровий підпис накладається на рядок, який складається шляхом конкатенації значень наступних атрибутів відповіді:<br/>  \n`\"customer\".\"last_name\"`<br/>  \n`\"customer\".\"first_name\"`<br/>  \n`\"customer\".\"middle_name\"`<br/>  \n`\"customer\".\"doc_series\"`<br/>  \n`\"customer\".\"doc_number\"`<br/>  \n`\"customer\".\"doc_issued\"`<br/>  \n`\"customer\".\"doc_date_of_issue\"`<br/>  \n`\"customer\".\"inn\"`<br/>  \n`\"invoice\".\"invoice_number\"`<br/>  \n`\"invoice\".\"invoice_date\"`<br/>  \n`\"invoice\".\"invoice_amount\"`<br/>  \n`\"payment_destination\".\"dest_id\"`<br/>  \n`\"payment_destination\".\"dest_name\"`<br/>  \n`\"payment_destination\".\"dest_mfo\"`<br/>  \n`\"payment_destination\".\"dest_bank_name\"`<br/>  \n`\"payment_destination\".\"dest_acc_number\"`<br/>  \n`\"header\".\"answer_datetime\"`<br/>  \n`\"bank\".\"agreement\"`<br/>  \n`\"bank\".\"agreement_date\"`<br/>  \n`\"bank\".\"credit_amount\"`<br/>  \n`\"bank\".\"customer_pay_amount\"`<br/>  \n`\"bank\".\"bank_id\"`<br/>  \n`\"bank\".\"bank_name\"`<br/>  \n`\"bank\".\"bank_executive\"`<br/>  \n\nЗначення атрибутів мають бути перераховані саме у зазначеному порядку, без пробілів чи інших роздільників.\nЯкщо значення параметра відсутнє – замість нього підставляється порожній рядок",
+        "operationId": "getOrderData_v2UsingPOST",
+        "parameters": [
+          {
+            "name": "signature",
+            "in": "header",
+            "description": "[Підпис запиту](/api-docs/chast#auth)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store-id",
+            "in": "header",
+            "description": "Ідентифікатор магазину (виданий під час укладання договору)",
+            "required": true,
+            "allowEmptyValue": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішна відповідь сервісу",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderData"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка у запиті",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Підпис не передано або не валідний",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервісу",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              },
+              "application/json;charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/OrderDataRequest"
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Bank": {
+        "type": "object",
+        "properties": {
+          "agreement": {
+            "type": "string",
+            "example": "123-123-1234",
+            "xml": {
+              "name": "agreement",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "ID заявки у системі банку. Номер кредитного договору"
+          },
+          "agreement_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2020-01-25",
+            "xml": {
+              "name": "agreement_date",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Дата ухвалення банком рішення про видачу кредиту"
+          },
+          "available_parts_count": {
+            "type": "integer",
+            "format": "int32",
+            "example": 12,
+            "xml": {
+              "name": "available_parts_count",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Кількість платежів за кредитом"
+          },
+          "bank_executive": {
+            "type": "string",
+            "example": "Иванов Иван Иванович",
+            "xml": {
+              "name": "bank_executive",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "ПІБ уповноваженої особи банку"
+          },
+          "bank_id": {
+            "type": "string",
+            "example": 12345678,
+            "xml": {
+              "name": "bank_id",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "ОКПО банку, що видає кредит"
+          },
+          "bank_name": {
+            "type": "string",
+            "example": "any bank",
+            "xml": {
+              "name": "bank_name",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Найменування банку, що видає кредит"
+          },
+          "credit_amount": {
+            "type": "number",
+            "example": 1234.56,
+            "xml": {
+              "name": "credit_amount",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Схвалена сума кредиту"
+          },
+          "credit_product": {
+            "type": "string",
+            "example": "MONO 234",
+            "xml": {
+              "name": "credit_product",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Вид кредитного продукту у програмі Продавця"
+          },
+          "customer_pay_amount": {
+            "type": "number",
+            "example": 123.35,
+            "xml": {
+              "name": "customer_pay_amount",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Схвалена сума початкового внеску"
+          },
+          "product_types": {
+            "type": "string",
+            "example": 1,
+            "xml": {
+              "name": "product_types",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Продукт. На сьогодні 1 - безвідсоткова розстрочка. 2 - розстрочка зі зниженою ставкою для клієнта (магазин лише частину платить за клієнта)",
+            "enum": [
+              "1",
+              "2"
+            ]
+          }
+        },
+        "title": "Bank"
+      },
+      "CheckInstallmentsResponse": {
+        "type": "object",
+        "properties": {
+          "bank_can_return_money_to_card": {
+            "type": "boolean",
+            "description": "Ознака того, що гроші можуть повернутись на картку клієнта під час повернення"
+          },
+          "fully_paid": {
+            "type": "boolean",
+            "description": "Ознака того, що заявка повністю оплачена клієнтом"
+          }
+        },
+        "title": "CheckInstallmentsResponse"
+      },
+      "Client": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "example": "Иван",
+            "description": "Ім'я клієнта"
+          },
+          "inn": {
+            "type": "string",
+            "example": 123456,
+            "description": "ІПН клієнта"
+          },
+          "last_name": {
+            "type": "string",
+            "example": "Иванов",
+            "description": "Прізвище клієнта"
+          },
+          "middle_name": {
+            "type": "string",
+            "example": "Иванович",
+            "description": "По-батькові клієнта"
+          }
+        },
+        "title": "Client"
+      },
+      "ClientDocuments": {
+        "type": "object",
+        "properties": {
+          "id_card": {
+            "description": "Паспорт клієнта нового виду (ID карта)",
+            "$ref": "#/components/schemas/IDCardDocument"
+          },
+          "international_passport": {
+            "description": "Закордонний паспорт",
+            "$ref": "#/components/schemas/InternationalPassport"
+          },
+          "passport": {
+            "description": "Паспорт клієнта",
+            "$ref": "#/components/schemas/PassportOrResidencePermitDocument"
+          },
+          "residence_permit": {
+            "description": "Посвідка на проживання клієнта",
+            "$ref": "#/components/schemas/PassportOrResidencePermitDocument"
+          }
+        },
+        "title": "ClientDocuments"
+      },
+      "CreateAdditionalParams": {
+        "type": "object",
+        "properties": {
+          "nds": {
+            "type": "number",
+            "example": 123.45,
+            "description": "Сума ПДВ (потрібна тільки для магазину Foxtrot)"
+          },
+          "seller_phone": {
+            "type": "string",
+            "example": "+380500000001",
+            "description": "Телефон продавця (потрібен лише для приймання через telegram бот)",
+            "pattern": "\\+380\\d{9}"
+          },
+          "ext_initial_sum": {
+            "type": "number",
+            "example": 100.01,
+            "description": "Сума початкового внеску, який сплатив покупець у касі магазину. Ця сума не бере участь у сумі кредиту, що оформляється, і повертається в гарантійному листі."
+          }
+        },
+        "title": "CreateAdditionalParams"
+      },
+      "FinancialCompanyMerchantInfo": {
+        "type": "object",
+        "properties": {
+          "edrpou_code": {
+            "type": "string",
+            "example": 12345678,
+            "description": "Код ЄДРПОУ",
+            "pattern": "\\d+"
+          },
+          "iban_account": {
+            "type": "string",
+            "example": "UA123456789012345678901234567",
+            "description": "IBAN продавця"
+          },
+          "store_name": {
+            "type": "string",
+            "example": "Електроніка Плюс",
+            "description": "Назва магазину"
+          }
+        },
+        "title": "FinancialCompanyMerchantInfo"
+      },
+      "CreateOrderInvoice": {
+        "type": "object",
+        "required": [
+          "date",
+          "number",
+          "source"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2018-01-23",
+            "description": "Дата чека/рахунку фактури. Формат: yyyy-MM-dd"
+          },
+          "number": {
+            "type": "string",
+            "example": "1234-1234",
+            "description": "Номер чека/рахунок фактури",
+            "minLength": 1,
+            "maxLength": 2147483647
+          },
+          "point_id": {
+            "type": "string",
+            "example": 1234,
+            "description": "Ідентифікатор торгової точки",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "source": {
+            "type": "string",
+            "example": "INTERNET",
+            "description": "Канал прийому платежу",
+            "enum": [
+              "STORE",
+              "INTERNET"
+            ]
+          }
+        },
+        "title": "CreateOrderInvoice"
+      },
+      "CreateOrderRequest": {
+        "type": "object",
+        "required": [
+          "available_programs",
+          "client_phone",
+          "invoice",
+          "products",
+          "store_order_id",
+          "total_sum"
+        ],
+        "properties": {
+          "store_order_id": {
+            "type": "string",
+            "example": "DF7D381",
+            "description": "Унікальний ідентифікатор транзакції на боці магазину. Потрібен для відсікання дублікатів",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "client_phone": {
+            "type": "string",
+            "example": "+380500000000",
+            "description": "Телефон клієнта",
+            "pattern": "\\+380\\d{9}"
+          },
+          "total_sum": {
+            "type": "number",
+            "example": 234.32,
+            "description": "Загальна сума заявки. Розділювач – точка. Має бути 2 знаки після точки",
+            "minimum": 1,
+            "exclusiveMinimum": false
+          },
+          "invoice": {
+            "description": "Дані рахунки-фактури",
+            "$ref": "#/components/schemas/CreateOrderInvoice"
+          },
+          "available_programs": {
+            "type": "array",
+            "description": "Можливі варіанти розстрочки",
+            "items": {
+              "$ref": "#/components/schemas/Program"
+            }
+          },
+          "products": {
+            "type": "array",
+            "description": "Список продуктів, вибраних для оплати частинами",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "result_callback": {
+            "type": "string",
+            "example": "https://store-domain/handle/pay-part/result",
+            "description": "Адреса сервісу, куди буде надіслано відповідь під час отримання заявкою кінцевого стану. Формат запиту буде аналогічним відповіді [сервісу перевірки станів](/api-docs/chast/servisy/robota-z-zaiavkamy/post--api--order--state) "
+          },
+          "financial_company_merchant_info": {
+            "description": "Інформація про продавця для фінансової компанії (використовується лише для фінансових компаній)",
+            "$ref": "#/components/schemas/FinancialCompanyMerchantInfo"
+          },
+          "additional_params": {
+            "description": "Додаткові поля (не обов'язкові для заповнення)",
+            "$ref": "#/components/schemas/CreateAdditionalParams"
+          }
+        },
+        "title": "CreateOrderRequest"
+      },
+      "CreateOrderResponse": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "example": "ORDER-0023-12345-87654",
+            "description": "Унікальний ідентифікатор заявки"
+          }
+        },
+        "title": "CreateOrderResponse"
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "document": {
+            "xml": {
+              "name": "document",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Документи клієнта",
+            "$ref": "#/components/schemas/ClientDocuments"
+          },
+          "first_name": {
+            "type": "string",
+            "example": "Иван",
+            "xml": {
+              "name": "first_name",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Ім'я клієнта"
+          },
+          "inn": {
+            "type": "string",
+            "example": "AA123456",
+            "xml": {
+              "name": "inn",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "ІПН клієнта. 10, або 9 цифр, або конкатенація полів <Серія документа клієнта> та <Номер документа клієнта>, якщо клієнт відмовився від отримання ІПН"
+          },
+          "last_name": {
+            "type": "string",
+            "example": "Иванов",
+            "xml": {
+              "name": "last_name",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Прізвище клієнта"
+          },
+          "middle_name": {
+            "type": "string",
+            "example": "Иванович",
+            "xml": {
+              "name": "middle_name",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "По-батькові клієнта"
+          }
+        },
+        "title": "Customer"
+      },
+      "DailyReportRequest": {
+        "type": "object",
+        "required": [
+          "date"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2018-01-23",
+            "description": "дата, за яку потрібно отримати відповідь"
+          }
+        },
+        "title": "DailyReportRequest"
+      },
+      "DailyReportResponse": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "type": "array",
+            "description": "Список операцій",
+            "items": {
+              "$ref": "#/components/schemas/ReportOrder"
+            }
+          }
+        },
+        "title": "DailyReportResponse"
+      },
+      "ExceptionResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Тіло запиту не відповідає формату json",
+            "description": "Текс помилки"
+          }
+        },
+        "title": "ExceptionResponse"
+      },
+      "Expansion": {
+        "type": "object",
+        "properties": {
+          "bank": {
+            "xml": {
+              "name": "bank",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Дані прийнятого кредитного рішення та банку, що видав кредит",
+            "$ref": "#/components/schemas/Bank"
+          },
+          "customer": {
+            "xml": {
+              "name": "customer",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Дані про клієнта",
+            "$ref": "#/components/schemas/Customer"
+          },
+          "invoice": {
+            "xml": {
+              "name": "invoice",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Дані рахунки на оплату товару",
+            "$ref": "#/components/schemas/Invoice"
+          },
+          "payment_destination": {
+            "xml": {
+              "name": "payment_destination",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Платіжні реквізити для зарахування кредитних коштів",
+            "$ref": "#/components/schemas/Payment"
+          },
+          "sign": {
+            "type": "string",
+            "example": "12E0F76458C6D1E4",
+            "xml": {
+              "name": "sign",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Електронно-цифровий підпис банку. Рядок у кодуванні Base64"
+          },
+          "stamp": {
+            "type": "string",
+            "example": "1199A0F5E7C4A212",
+            "xml": {
+              "name": "stamp",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Електронна цифрова печатка банку Рядок у кодуванні Base64"
+          }
+        },
+        "title": "Expansion"
+      },
+      "Header": {
+        "type": "object",
+        "properties": {
+          "answer_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2018-01-25T12:36:01",
+            "xml": {
+              "name": "answer_datetime",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Дата та час формування даного гарантійного листа"
+          },
+          "contract_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2018-01-25",
+            "xml": {
+              "name": "contract_date",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Дата договору між банком та магазином"
+          },
+          "contract_number": {
+            "type": "string",
+            "example": 12345678,
+            "xml": {
+              "name": "contract_number",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Номер договору між банком та магазином"
+          },
+          "from_organization": {
+            "type": "string",
+            "example": "any bank",
+            "xml": {
+              "name": "from_organization",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Найменування банку, що видає кредит"
+          },
+          "organization_id": {
+            "type": "string",
+            "example": 12345678,
+            "xml": {
+              "name": "organization_id",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "ОКПО банку, що видає кредит"
+          },
+          "request_id": {
+            "type": "string",
+            "example": "123-123-1234",
+            "xml": {
+              "name": "request_id",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "ID заявки у системі банку. Номер кредитного договору"
+          }
+        },
+        "title": "Header"
+      },
+      "IDCardDocument": {
+        "type": "object",
+        "properties": {
+          "date_of_issue": {
+            "type": "string",
+            "example": "1901-01-29",
+            "description": "Дата видачі документа клієнту"
+          },
+          "issued": {
+            "type": "string",
+            "example": 1234,
+            "description": "Орган видачі документа клієнта"
+          },
+          "number": {
+            "type": "string",
+            "example": 123456,
+            "description": "Номер документа клієнта"
+          },
+          "registry_number": {
+            "type": "string",
+            "example": "12345678-12345",
+            "description": "№ запису паспорта у реєстрі. 13 цифр або 8 цифр дефіс 5 цифр. Обов'язкове поле <Тип документа клієнта> = 1"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-25",
+            "description": "Термін дії документа клієнта"
+          }
+        },
+        "title": "IDCardDocument"
+      },
+      "InstallmentAvailabilityRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "employeeID",
+          "inn",
+          "outletID",
+          "phone"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "сума товару, який клієнт хоче купити"
+          },
+          "employeeID": {
+            "type": "string",
+            "description": "Ідентифікатор співробітника (якщо це онлайн операція — технічний логін)",
+            "minLength": 1,
+            "maxLength": 2147483647
+          },
+          "inn": {
+            "type": "string",
+            "description": "ІПН клієнта"
+          },
+          "outletID": {
+            "type": "string",
+            "description": "Ідентифікатор торгової точки, в якій відбувається продаж",
+            "minLength": 1,
+            "maxLength": 2147483647
+          },
+          "phone": {
+            "type": "string",
+            "example": "+380500000001",
+            "description": "Номер телефону клієнта",
+            "pattern": "\\+380\\d{9}"
+          }
+        },
+        "title": "InstallmentAvailabilityRequest"
+      },
+      "InstallmentAvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Ознака того, що клієнтові доступна ПЧ на цю суму"
+          }
+        },
+        "title": "InstallmentAvailabilityResponse"
+      },
+      "InternationalPassport": {
+        "type": "object",
+        "properties": {
+          "date_of_issue": {
+            "type": "string",
+            "example": "1901-01-29",
+            "description": "Дата видачі документа клієнту"
+          },
+          "number": {
+            "type": "string",
+            "example": 123456,
+            "description": "Номер документа клієнта"
+          },
+          "series": {
+            "type": "string",
+            "example": "FV",
+            "description": "Серія паспорта"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-25",
+            "description": "Термін дії документа клієнта"
+          }
+        },
+        "title": "InternationalPassport"
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "invoice_amount": {
+            "type": "number",
+            "example": 1234.56,
+            "xml": {
+              "name": "invoice_amount",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Сума рахунку-фактури"
+          },
+          "invoice_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2018-01-25",
+            "xml": {
+              "name": "invoice_date",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Дата рахунку-фактури"
+          },
+          "invoice_number": {
+            "type": "string",
+            "example": "1234-1234-1234",
+            "xml": {
+              "name": "invoice_number",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Номер рахунку-фактури"
+          }
+        },
+        "title": "Invoice"
+      },
+      "OrderData": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "xml": {
+              "name": "header",
+              "attribute": false,
+              "wrapped": false
+            },
+            "$ref": "#/components/schemas/Header"
+          },
+          "expansion": {
+            "xml": {
+              "name": "expansion",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Розширення",
+            "$ref": "#/components/schemas/Expansion"
+          }
+        },
+        "title": "OrderData"
+      },
+      "OrderDataRequest": {
+        "type": "object",
+        "required": [
+          "order_id"
+        ],
+        "properties": {
+          "invoice": {
+            "$ref": "#/components/schemas/OrderDataRequestInvoice"
+          },
+          "order_id": {
+            "type": "string",
+            "example": "ORDER-0023",
+            "description": "Унікальний ідентифікатор заявки",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          }
+        },
+        "title": "OrderDataRequest"
+      },
+      "OrderDataRequestInvoice": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2018-01-23",
+            "xml": {
+              "name": "date",
+              "attribute": true,
+              "wrapped": false
+            },
+            "description": "Дата чека/рахунку фактури. Формат: yyyy-MM-dd"
+          },
+          "number": {
+            "type": "string",
+            "example": "002334",
+            "xml": {
+              "name": "number",
+              "attribute": true,
+              "wrapped": false
+            },
+            "description": "Номер чека/рахунку фактури",
+            "minLength": 1,
+            "maxLength": 2147483647
+          }
+        },
+        "title": "OrderDataRequestInvoice"
+      },
+      "OrderShortInfo": {
+        "type": "object",
+        "properties": {
+          "create_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2021-06-16T16:49:51",
+            "description": "Дата та час подання завки на ПЧ. Формат: yyyy-MM-dd'T'HH:mm:ss"
+          },
+          "invoice_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2018-01-23",
+            "description": "Дата чека/рахунку фактури. Формат: yyyy-MM-dd"
+          },
+          "invoice_number": {
+            "type": "string",
+            "example": "1234-1234",
+            "description": "Номер чека/рахунку фактуры"
+          },
+          "maskedCard": {
+            "type": "string",
+            "description": "Маскований номер карти"
+          },
+          "point_id": {
+            "type": "string",
+            "example": 1234,
+            "description": "Ідентифікатор торгової точки"
+          },
+          "reverse_list": {
+            "type": "array",
+            "description": "Список повернень (може бути пустим)",
+            "items": {
+              "$ref": "#/components/schemas/Reverse"
+            }
+          },
+          "source": {
+            "type": "string",
+            "example": "INTERNET",
+            "description": "Канал приймання платежу",
+            "enum": [
+              "INTERNET",
+              "STORE"
+            ]
+          },
+          "store_order_id": {
+            "type": "string",
+            "example": "DF7D381",
+            "description": "Унікальний ідентифікатор транзакції на боці магазину"
+          },
+          "total_sum": {
+            "type": "number",
+            "example": 234.32,
+            "description": "Загальна сума заявки."
+          }
+        },
+        "title": "OrderShortInfo"
+      },
+      "OrderStateInfo": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Додатковий опис (може не бути)"
+          },
+          "order_id": {
+            "type": "string",
+            "example": "ORDER-0001",
+            "description": "Ідентифікатор заявки"
+          },
+          "order_sub_state": {
+            "type": "string",
+            "example": "REJECTED_BY_CLIENT",
+            "description": "Детальний стан заявки. Можливі варіанти:\n* ADDED - заявку додано на опрацювання\n* CLIENT_NOT_FOUND - клієнта не знайдено\n* EXCEEDED_SUM_LIMIT - клієнт перевищив допустимий ліміт на покупку частинами\n* PAY_PARTS_ARE_NOT_ACCEPTABLE - із цією кількістю платежів клієнт не може оформити розстрочку\n* CLIENT_CONFIRM_TIME_EXPIRED - минув час підтвердження заявки клієнтом\n* WAITING_FOR_CLIENT - очікування на підтвердження від клієнта\n* REJECTED_BY_CLIENT - клієнт відмовився від здійснення покупки\n* REJECTED_BY_STORE - магазин відмовився від продажу\n* WAITING_FOR_STORE_CONFIRM - очікування від магазину підтвердження заявки (стан можливий тільки для магазинів з двотактним підтвердженням заявки)\n* SUCCESS - заявку успішно опрацьовано\nНадалі цей список може бути розширений\n",
+            "enum": [
+              "ADDED",
+              "INTERNAL_ADDED",
+              "INTERNAL_CHECKED",
+              "CLIENT_NOT_FOUND",
+              "WRONG_CLIENT_APP_VERSION",
+              "EXCEEDED_SUM_LIMIT",
+              "ACCOUNT_CLOSED",
+              "PAY_PARTS_ARE_NOT_ACCEPTABLE",
+              "EXISTS_OTHER_OPEN_ORDER",
+              "EXISTS_EXT_OTHER_OPEN_ORDER",
+              "NOT_ENOUGH_MONEY_FOR_INIT_DEBIT",
+              "CHECKED",
+              "WAITING_FOR_CLIENT",
+              "CLIENT_APPROVED_PUSH",
+              "INIT_DEBIT_SENT",
+              "INIT_DEBIT_OK",
+              "CLIENT_PUSH_TIMEOUT",
+              "CONFIRM_TIME_EXPIRED",
+              "FRAUD_REJECTED",
+              "REJECTED_BY_CLIENT",
+              "WAITING_FOR_STORE_CONFIRM",
+              "REJECTED_BY_STORE",
+              "ACTIVE",
+              "DONE",
+              "EARLY_CLOSED_BY_CLIENT",
+              "RETURNED",
+              "FAIL",
+              "RESTRICTED_BY_RISKS"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "example": "FAIL",
+            "description": "Поточний стан заявки (загальне). Можливі варіанти:\n* SUCCESS - заявку успішно опрацьовано (кінцевий стан)\n* FAIL - заявку забраковано (кінцевий стан)\n* IN_PROCESS - заявка у процесі опрацювання\nТаблиця відповідності загального стану з деталями:\n\nЗагальний стан | Детальний стан\n------------ | -------------\nSUCCESS | SUCCESS\nFAIL | CLIENT_NOT_FOUND\nFAIL | EXCEEDED_SUM_LIMIT\nFAIL | PAY_PARTS_ARE_NOT_ACCEPTABLE\nFAIL | CLIENT_CONFIRM_TIME_EXPIRED\nFAIL | REJECTED_BY_CLIENT\nFAIL | REJECTED_BY_STORE\nIN_PROCESS | ADDED\nIN_PROCESS | WAITING_FOR_CLIENT\nIN_PROCESS | WAITING_FOR_STORE_CONFIRM\n\n",
+            "enum": [
+              "SUCCESS",
+              "FAIL",
+              "IN_PROCESS"
+            ]
+          }
+        },
+        "title": "OrderStateInfo"
+      },
+      "PassportOrResidencePermitDocument": {
+        "type": "object",
+        "properties": {
+          "date_of_issue": {
+            "type": "string",
+            "example": "1901-01-29",
+            "description": "Дата видачі документа клієнту"
+          },
+          "issued": {
+            "type": "string",
+            "example": 1234,
+            "description": "Орган видачі документа клієнта"
+          },
+          "number": {
+            "type": "string",
+            "example": 123456,
+            "description": "Номер документа клієнта"
+          },
+          "series": {
+            "type": "string",
+            "example": "AA",
+            "description": "Серія паспорта / Серія посвідки на проживання"
+          }
+        },
+        "title": "PassportOrResidencePermitDocument"
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "dest_acc_number": {
+            "type": "string",
+            "example": 1234567890123,
+            "xml": {
+              "name": "dest_acc_number",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Номер рахунку для зарахування коштів"
+          },
+          "dest_bank_name": {
+            "type": "string",
+            "example": "any bank",
+            "xml": {
+              "name": "dest_bank_name",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Найменування банку, в якому відкрито рахунок для зарахування коштів"
+          },
+          "dest_id": {
+            "type": "string",
+            "example": 12345678,
+            "xml": {
+              "name": "dest_id",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "ОКПО компанії, на рахунок якої будуть зараховані кошти"
+          },
+          "dest_mfo": {
+            "type": "string",
+            "example": 123456,
+            "xml": {
+              "name": "dest_mfo",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "МФО банку, в якому відкрито рахунок для зарахування коштів"
+          },
+          "dest_name": {
+            "type": "string",
+            "example": "any super company",
+            "xml": {
+              "name": "dest_name",
+              "attribute": false,
+              "wrapped": false
+            },
+            "description": "Найменування компанії, на рахунок якої буде зараховано кошти"
+          }
+        },
+        "title": "Payment"
+      },
+      "Product": {
+        "type": "object",
+        "required": [
+          "count",
+          "name",
+          "sum"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Телевизор",
+            "description": "Найменування товару",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3,
+            "description": "Кількість товару цього виду",
+            "minimum": 1,
+            "exclusiveMinimum": false
+          },
+          "sum": {
+            "type": "number",
+            "example": 9999.99,
+            "description": "Ціна за одиницю товару. Розділювач – точка. Має бути 2 знаки після точки",
+            "minimum": 0.01,
+            "exclusiveMinimum": false
+          }
+        },
+        "title": "Product"
+      },
+      "Program": {
+        "type": "object",
+        "required": [
+          "available_parts_count",
+          "type"
+        ],
+        "properties": {
+          "available_parts_count": {
+            "type": "array",
+            "example": [
+              10
+            ],
+            "description": "Кількість частин, на яку оформити заявку",
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          "type": {
+            "type": "string",
+            "example": "product _1",
+            "description": "Тип / наименование / идентификатор рассрочки. На текущий момент возможное только одно значение: payment_installments",
+            "pattern": "^payment_installments$"
+          }
+        },
+        "title": "Program"
+      },
+      "ReportOrder": {
+        "type": "object",
+        "properties": {
+          "commission": {
+            "type": "number",
+            "description": "Сума комісії"
+          },
+          "commission_percent": {
+            "type": "number",
+            "description": "% комісії"
+          },
+          "invoice_number": {
+            "type": "string",
+            "description": "№ рахунки фактури"
+          },
+          "odb_contract_number": {
+            "type": "string",
+            "description": "Номер кредитного договору"
+          },
+          "operation_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата та час операції"
+          },
+          "order_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата рахунку фактури. Формат: yyyy-MM-dd"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "Ідентифікатор ПЧ"
+          },
+          "pay_parts": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Кількість щомісячних платежів згідно з кредитним договором"
+          },
+          "total_sum": {
+            "type": "number",
+            "description": "Сума кредиту"
+          },
+          "transferred_sum": {
+            "type": "number",
+            "description": "Перерахована сума"
+          }
+        },
+        "title": "ReportOrder"
+      },
+      "RequestClientInfoRequest": {
+        "type": "object",
+        "required": [
+          "phone"
+        ],
+        "properties": {
+          "callbackUrl": {
+            "type": "string",
+            "description": "Адреса сервісу, куди буде надіслано колбек із рішенням клієнта"
+          },
+          "extref": {
+            "type": "string",
+            "description": "Унікальний ідентифікатор на боці сторони, що викликає"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Номер телефону клієнта",
+            "pattern": "\\+380\\d{9}"
+          }
+        },
+        "title": "RequestClientInfoRequest"
+      },
+      "RequestWithOrderIdentifier": {
+        "type": "object",
+        "required": [
+          "order_id"
+        ],
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "example": "ORDER-0023",
+            "description": "Унікальний ідентифікатор заявки",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          }
+        },
+        "title": "RequestWithOrderIdentifier"
+      },
+      "ReturnAdditionalParams": {
+        "type": "object",
+        "properties": {
+          "nds": {
+            "type": "number",
+            "example": 123.45,
+            "description": "Сума ПДВ (потрібна тільки для магазину Foxtrot)"
+          }
+        },
+        "title": "ReturnAdditionalParams"
+      },
+      "ReturnRequest": {
+        "type": "object",
+        "required": [
+          "order_id",
+          "return_money_to_card",
+          "store_return_id",
+          "sum"
+        ],
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "example": "ORDER-0023",
+            "description": "Унікальний ідентифікатор заявки",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "return_money_to_card": {
+            "type": "boolean",
+            "example": true,
+            "description": "Ознака необхідності повернення грошей на картку клієнта. TRUE — банк повинен повернути гроші на картку клієнта, FALSE — магазин сам повернув готівку клієнтові"
+          },
+          "store_return_id": {
+            "type": "string",
+            "example": 12345,
+            "description": "Ідентифікатор повернення на боці магазину. Має бути унікальним для кожного повернення (в рамках одної ПЧ)",
+            "minLength": 1,
+            "maxLength": 2147483647
+          },
+          "sum": {
+            "type": "number",
+            "example": 12345,
+            "description": "Сума товарів, які необхідно повернути",
+            "minimum": 0.01,
+            "exclusiveMinimum": false
+          },
+          "additional_params": {
+            "description": "Додаткові поля (не обов'язкові для заповнення)",
+            "$ref": "#/components/schemas/ReturnAdditionalParams"
+          }
+        },
+        "title": "ReturnRequest"
+      },
+      "ReturnResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "OK",
+            "description": "Статус повернення. OK — повернення прийнято успішно, інакше — помилка"
+          }
+        },
+        "title": "ReturnResponse"
+      },
+      "Reverse": {
+        "type": "object",
+        "properties": {
+          "sum": {
+            "type": "number",
+            "description": "Сума повернення"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2021-06-16T16:49:51",
+            "description": "Дата та час повернення. Формат: yyyy-MM-dd'T'HH:mm:ss"
+          }
+        },
+        "title": "Reverse"
+      },
+      "ValidateClientRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+380000000001",
+            "description": "Номер телефону клієнта",
+            "pattern": "\\+380\\d{9}"
+          }
+        },
+        "title": "ValidateClientRequest"
+      },
+      "ValidateClientResponse": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "description": "Дані клієнта",
+            "$ref": "#/components/schemas/Client"
+          },
+          "found": {
+            "type": "boolean",
+            "description": "Ознака того, що клієнта знайдено"
+          }
+        },
+        "title": "ValidateClientResponse"
+      },
+      "ValidateClientSimpleResponse": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean",
+            "description": "Ознака того, що клієнта знайдено"
+          }
+        },
+        "title": "ValidateClientSimpleResponse"
+      }
+    },
+    "requestBodies": {
+      "ValidateClientRequest": {
+        "content": {
+          "application/json;charset=UTF-8": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidateClientRequest"
+            }
+          }
+        },
+        "description": "request",
+        "required": true
+      },
+      "RequestWithOrderIdentifier": {
+        "content": {
+          "application/json;charset=UTF-8": {
+            "schema": {
+              "$ref": "#/components/schemas/RequestWithOrderIdentifier"
+            }
+          }
+        },
+        "description": "request",
+        "required": true
+      },
+      "OrderDataRequest": {
+        "content": {
+          "application/xml": {
+            "schema": {
+              "$ref": "#/components/schemas/OrderDataRequest"
+            }
+          },
+          "application/json;charset=UTF-8": {
+            "schema": {
+              "$ref": "#/components/schemas/OrderDataRequest"
+            }
+          }
+        },
+        "description": "request",
+        "required": true
+      }
+    }
+  }
+}
