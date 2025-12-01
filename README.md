@@ -15,12 +15,6 @@
 Monobank Open API - API що доступне публічно (без аутентифікації), або клієнтам банку за токеном аутентифікації,
 або провайдерам послуг.
 
-Link на документацію щодо Monobank Open API:
-- загальний https://api.monobank.ua/docs/
-- корпоративний API для провайдерів послуг https://api.monobank.ua/docs/corporate.html
-
-> Див. також OpenAPI specification [open_personal_api.json](specs/open_personal_api.json)
-
 Дане API це особиста ініціатива частини із розробників Mono. Підтримується у вільний час і надається як є.
 
 Під "підтримується у вільний час" мається на увазі, що над проектом Open API працюють співробітники monobank, але для нього немає  "спринтів", "ПМ", "плану розвитку", "показників" і  всього того, що є у інших напрямках.
@@ -31,10 +25,22 @@ Link на документацію щодо Monobank Open API:
 
 Тільки розробник може надати _абсолютно точну та вичерпну_ інформацію по даному API.
 
+### Загальний (персональний) API
+
+Посилання на документацію API: https://api.monobank.ua/docs/ (або: https://monobank.ua/api-docs/monobank)
+
+> Див. також OpenAPI specification [open_personal_api.json](specs/open_personal_api.json)
+
 ### Корпоративний API для провайдерів послуг
+
+Посилання на документацію API: https://api.monobank.ua/docs/corporate.html (або: https://monobank.ua/api-docs/providers)
 
 "Production" доступ до API надається ЛИШЕ після підтвердження заявки відправленої через API: 
 https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-kompaniyi/paths/~1personal~1auth~1registration/post
+
+> Загальна схема взаємодії з API є досить схожою до схеми взаємодії з персональним API, 
+> тож до моменту отримання підтвердження заявки на використання API для провайдерів -
+> для тестування можна використовувати персональний API
 
 Алгоритм підпису запитів до API ("X-Sign" HTTP header): https://gist.github.com/Sominemo/64845669d6326f2f73d356f025656bdb#signing-the-request
 
@@ -70,17 +76,14 @@ Endpoint виписки транзакцій ([docs](https://api.monobank.ua/doc
 
 ## Часті питання
 
-### 1. Чи можна отримати теги створені користувачем до платежів з виписки?
+### 1. Як отримати OpenAPI specification щодо API?
 
-Ні. Коли це буде доступно - невідомо.
+Маючи OpenAPI specification (https://www.openapis.org/) ви можете використати code generator для вашої мови програмування,
+відслідковувати зміни у API порівнюючи схему що ви використали (і зберегли) "місяць тому" і поточну, тощо.
 
-### 2. Як отримати OpenAPI specification щодо API?
-
-> Note: за відсутності API changelogs в якості експерименту мейнтейнерами community
-> документації час від часу синхронізується OpenAPI specification в директорію [specs](specs/).
+> **Note**: за відсутності API changelogs в якості експерименту мейнтейнерами community
+> документації час від часу (вручну) синхронізується OpenAPI specification в директорію [specs](specs/).
 > Наприклад [specs/open_personal_api.json](specs/open_personal_api.json)
-
-Маючи OpenAPI specification (https://www.openapis.org/) ви можете використати code generator для вашої мови програмування, відслідковувати зміни у API порівнюючи схему що ви витягали "місяць тому" і поточну, тощо.
 
 Не дивлячись на те, що явного способу скачати OpenAPI specification у документації Monobank не надається - проте технічна можливість дізнатись її - присутня.
 
@@ -93,7 +96,11 @@ console.log(jsonSchema);
 
 У результаті - у консолі буде виведено OpenAPI specification JSON string - який ви можете скопіювати собі у файл, у онлайн редактор https://editor.swagger.io, тощо
 
-> Для інших API інформація щодо можливості дізнатись OpenAPI specification уточнюється у релевантних розділах нижче
+> Для інших API інформація щодо можливості дізнатись OpenAPI specification уточнюється у релевантних розділах нижче.
+
+### 2. Чи можна отримати теги створені користувачем до платежів з виписки?
+
+Ні. Коли це буде доступно - невідомо.
 
 ## Troubleshooting
 
