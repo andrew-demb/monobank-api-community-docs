@@ -132,7 +132,9 @@ Monobank має не тільки open API, але й інші:
 1. Інтернет-еквайринг
 2. Покупка частинами
 3. Expirenza by mono (shaketopay)
-4. mono checkout
+4. API для роботи з рахунками юридичних осіб
+5. Open Banking
+6. mono checkout (застаріло)
 
 Також перелік API сервісів є присутнім з швидким переходом до документації перелічених сервісів можна побачити за даною адресою https://monobank.ua/api-docs
 
@@ -180,7 +182,23 @@ curl 'https://u2-demo-ext.mono.st4g3.com/v2/api-docs' -H 'accept: application/js
 
 Посилання на документацію API: https://docs.expirenza.com/api
 
-### 4. mono checkout (застаріло)
+OpenAPI specification не може бути представленим, оскільки вся взаємодія йде через WebSocket.
+
+### 4. API для роботи з рахунками юридичних осіб
+
+Посилання на документацію API: https://corp-api.monobank.ua
+
+> Див. також [legal_entity.json](specs/legal_entity.json)
+
+### 5. Open Banking
+
+Що це: https://bank.gov.ua/ua/payments/open-banking
+
+Посилання на документацію API: https://ob.mono.bank
+
+OpenAPI specification є доступним до скачування з UI сторінки і не відстежується у поточному репозиторії.
+
+### 6. mono checkout (застаріло)
 
 **ВАЖЛИВО**: даний сервіс наразі не є доступним для нових клієнтів і наразі знаходиться в процесі закриття.
 
