@@ -3373,16 +3373,6 @@
             "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача після завершення оплати (у разі успіху або помилки), це поле обовʼязкове при `initiationKind=client`",
             "example": "https://example.com/your/website/result/page"
           },
-          "successUrl": {
-            "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
-            "example": "https://example.com/your/website/success/page"
-          },
-          "failUrl": {
-            "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
-            "example": "https://example.com/your/website/fail/page"
-          },
           "initiationKind": {
             "type": "string",
             "enum": [
@@ -4027,16 +4017,6 @@
             "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача за умови проведення 3DS",
             "example": "https://example.com/your/website/result/page"
           },
-          "successUrl": {
-            "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
-            "example": "https://example.com/your/website/success/page"
-          },
-          "failUrl": {
-            "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
-            "example": "https://example.com/your/website/fail/page"
-          },
           "webHookUrl": {
             "type": "string",
             "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту “Статус рахунку”. **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**",
@@ -4634,16 +4614,6 @@
             "type": "string",
             "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача після завершення оплати",
             "example": "https://example.com/your/website/result/page"
-          },
-          "successUrl": {
-            "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
-            "example": "https://example.com/your/website/success/page"
-          },
-          "failUrl": {
-            "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
-            "example": "https://example.com/your/website/fail/page"
           },
           "webHookUrls": {
             "type": "object",
