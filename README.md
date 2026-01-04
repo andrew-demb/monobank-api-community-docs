@@ -46,6 +46,33 @@ https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-k
 
 > Див. також OpenAPI specification [open_provider_api.json](specs/open_provider_api.json)
 
+#### Блок-схема для визначення чи потрібен Вам API для провайдерів послуг
+
+<details>
+<summary>Показати блок-схему</summary>
+
+```mermaid
+flowchart TD
+    A([Початок])
+    B{У проєкті задіяно сервер?}
+    C{"Застосунок для обмеженого кола користувачів? (родина, друзі, навчальний проєкт)"}
+    D{Запити виконуються напряму з машини користувача на api.monobank.ua, токени та ідентифікатори не передаються на ваш сервер?}
+    Corporate[Корпоративний API]
+    Personal[Персональний API]
+
+    A --> B
+    B -- Так --> C
+    B -- Ні --> Personal
+    C -- Так --> Personal
+    C -- Ні --> D
+    D -- Так --> Personal
+    D -- Ні --> Corporate
+```
+
+> Автор: Sominemo
+
+</details>
+
 ## Telegram API community
 
 У Telegram створено чат для спільноти користувачів Monobank Open API для наступного:
