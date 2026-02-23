@@ -1,2359 +1,5 @@
 {
-  "components": {
-    "responses": {
-      "BadRequest": {
-        "description": "Bad Request (invalid request parameters)",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "Forbidden": {
-        "description": "Forbidden",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "NotFound": {
-        "description": "Data not found",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "NotAcceptable": {
-        "description": "Not Acceptable (invalid Accept header)",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "Conflict": {
-        "description": "Conflict (duplicate request provided)",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "TooManyRequests": {
-        "description": "Too many requests",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      }
-    },
-    "schemas": {
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "errorCode": {
-            "type": "string",
-            "description": "Код помилки"
-          },
-          "errorDescription": {
-            "type": "string",
-            "description": "Текст (опис) помилки"
-          }
-        }
-      },
-      "StatementItem": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Ідентифікатор платежу",
-            "example": "ea4f9218-d134-431a-9169-88acab4454c9"
-          },
-          "time": {
-            "type": "integer",
-            "description": "Час транзакції в секундах в форматі Unix time",
-            "format": "int64",
-            "example": 1719472805
-          },
-          "description": {
-            "type": "string",
-            "description": "Призначення операції",
-            "example": "Оплата за щось цікаве 😊"
-          },
-          "amount": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Сума у валюті рахунку в мінімальних одиницях валюти (копійках, центах). Якщо сума від'ємна - то це списання з рахунку. Якщо зі знаком плюс - то поповнення рахунку",
-            "example": 12345
-          },
-          "currencyCode": {
-            "type": "string",
-            "description": "Код валюти рахунку відповідно ISO 4217",
-            "example": "980"
-          },
-          "receiptId": {
-            "type": "string",
-            "description": "Номер квитанции для check.gov.ua. Поле може бути відсутнім",
-            "example": "XXXX-XXXX-XXXX-XXXX"
-          },
-          "counterEdrpou": {
-            "type": "string",
-            "description": "ЄДРПОУ контрагента. Для вхідних операцій - ЄДРПОУ того хто поповнив рахунок. Для вихідних - ЄДРПОУ того, куди були перераховані кошти",
-            "example": 21133352
-          },
-          "counterIban": {
-            "type": "string",
-            "description": "IBAN контрагента. Для вхідних операцій - IBAN рахунок з якого було виконане поповнення. Для вихідних - IBAN рахунок, на який було перераховано кошти",
-            "example": "UA293220010000026000000000001"
-          },
-          "counterName": {
-            "type": "string",
-            "description": "Найменування контрагента. Для вхідних операцій - найменування контрагента, який здійснив поповнення рахунку. Для вихідних - найменування контрагента, якому було перераховано кошти",
-            "example": "ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ ..."
-          },
-          "reverse": {
-            "type": "boolean",
-            "description": "Ознака транзакції реверсу",
-            "example": false
-          },
-          "status": {
-            "type": "string",
-            "description": "Статус операції",
-            "example": "DONE",
-            "enum": [
-              "DONE",
-              "PENDING",
-              "DECLINED"
-            ]
-          }
-        }
-      },
-      "PaymentRequestReceiver": {
-        "type": "object",
-        "required": [
-          "iban",
-          "edrpou",
-          "name"
-        ],
-        "properties": {
-          "iban": {
-            "example": "UA293220010000026000000000001",
-            "type": "string",
-            "description": "IBAN рахунку на який треба перерахувати кошти"
-          },
-          "edrpou": {
-            "example": 21133352,
-            "type": "string",
-            "description": "ЕДРПОУ отримувача коштів"
-          },
-          "name": {
-            "type": "string",
-            "description": "Назва отримувача коштів (назва компанії або ПІБ фізичної особи, якщо платіж на рахунок фізичної особи)"
-          }
-        }
-      },
-      "CreatePaymentRequest": {
-        "type": "object",
-        "required": [
-          "senderIban",
-          "receiver",
-          "destination",
-          "amount",
-          "currency"
-        ],
-        "properties": {
-          "senderIban": {
-            "type": "string",
-            "example": "UA293220010000026000000000001",
-            "description": "IBAN рахунку з якого треба зробити платіж"
-          },
-          "receiver": {
-            "$ref": "#/components/schemas/PaymentRequestReceiver"
-          },
-          "destination": {
-            "type": "string",
-            "example": "some payment destination",
-            "description": "Призначення платежу. Для бюджетних платежів призначення має бути спеціального формату: `{payCode з запиту} {additionalInfo з запиту} ЄДРПОУ {ЄДРПОУ вашої компанії}`",
-            "minLength": 6,
-            "maxLength": 420
-          },
-          "amount": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Сума операції в мінімальних одиницях валюти (копійках, центах)",
-            "minimum": 1,
-            "maximum": 10000000000
-          },
-          "currency": {
-            "type": "string",
-            "description": "Код валюти операції відповідно ISO 4217. На даний момент єдина можлива валюта - 980 (гривня)",
-            "example": "980"
-          },
-          "payCode": {
-            "type": "string",
-            "example": "058",
-            "description": "[Код оплати](https://unifinance.ua/perechen-kodov-vidov-oplat-nalogov/) (необхідний для створення бюджетного платежу)",
-            "minLength": 3,
-            "maxLength": 3
-          },
-          "additionalInfo": {
-            "type": "string",
-            "pattern": ".{6,130}",
-            "description": "Додаткова інформація платежу (потрібна для створення бюджетного платежу)"
-          }
-        }
-      },
-      "CreatePaymentResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Ідентифікатор платежу"
-          }
-        }
-      },
-      "GetPaymentStateResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Ідентифікатор платежу"
-          },
-          "state": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "DECLINED",
-              "IN_STATEMENT"
-            ],
-            "description": "Поточний стан платежу: * `DRAFT` - Платіж створений клієнтом, але ще не відправлений на обробку. * `DECLINED` - Підготовлений платіж був відхилений (скасований клієнтом до підписання або з інших причин). Платіж з цим статусом не піде в обробку. * `IN_STATEMENT` - Платіж пішов в обробку. Щоб побачити детальний статус транзакції з категорії IN_STATEMENT, використовуйте деталізацію виписки за ідентифікатором транзакції.\n"
-          }
-        }
-      },
-      "Account": {
-        "type": "object",
-        "properties": {
-          "iban": {
-            "type": "string",
-            "description": "IBAN рахунку",
-            "example": "UA293220010000026002700000002"
-          },
-          "currency": {
-            "type": "integer",
-            "description": "Код валюти рахунку згідно зі стандартом ISO 4217 (980 - гривня, 840 - долар США, 978 - євро)",
-            "example": 980
-          },
-          "balance": {
-            "type": "number",
-            "description": "Поточний баланс рахунку в одиницях відповідної валюти",
-            "example": 42
-          }
-        }
-      },
-      "DocumentType": {
-        "type": "string",
-        "description": "Тип документа",
-        "enum": [
-          "OLD_PASSPORT",
-          "ID_CARD",
-          "FOREIGN_PASSPORT"
-        ]
-      },
-      "SalaryContactResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Унікальний ідентифікатор контакту",
-            "example": "123e4567-e89b-12d3-a456-426614174000"
-          },
-          "leClientID": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Ідентифікатор клієнта в системі банку",
-            "example": 12345678
-          },
-          "fullName": {
-            "type": "string",
-            "description": "Повне ім'я контакту (прізвище, ім'я, по батькові)",
-            "example": "Петренко Петро Петрович"
-          },
-          "inn": {
-            "type": "string",
-            "description": "ІПН (РНОКПП) контакту",
-            "example": "3096889974"
-          },
-          "documentType": {
-            "$ref": "#/components/schemas/DocumentType"
-          },
-          "documentNumber": {
-            "type": "string",
-            "description": "Номер документа контакту",
-            "example": "123456"
-          },
-          "documentSeries": {
-            "type": "string",
-            "description": "Серія документа контакту (якщо застосовується)",
-            "example": "АБ"
-          },
-          "iban": {
-            "type": "string",
-            "description": "IBAN рахунку контакту",
-            "example": "UA213223130000026007233566001"
-          },
-          "pan": {
-            "type": "string",
-            "description": "Маскований номер картки контакту",
-            "example": "4444****18"
-          }
-        }
-      },
-      "SalaryContactPageResponse": {
-        "type": "object",
-        "properties": {
-          "hasMore": {
-            "type": "boolean",
-            "description": "Ознака наявності наступної сторінки результатів"
-          },
-          "contacts": {
-            "type": "array",
-            "description": "Список знайдених контактів",
-            "items": {
-              "$ref": "#/components/schemas/SalaryContactResponse"
-            }
-          }
-        }
-      },
-      "DeleteSalaryContactsRequest": {
-        "type": "object",
-        "properties": {
-          "ids": {
-            "type": "array",
-            "description": "Список ідентифікаторів контактів для видалення",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "minItems": 1,
-            "example": [
-              "123e4567-e89b-12d3-a456-426614174000",
-              "223e4567-e89b-12d3-a456-426614174000"
-            ]
-          }
-        }
-      },
-      "SalaryContactRequest": {
-        "type": "object",
-        "properties": {
-          "firstName": {
-            "type": "string",
-            "description": "Ім'я контакту",
-            "example": "Петро"
-          },
-          "lastName": {
-            "type": "string",
-            "description": "Прізвище контакту",
-            "example": "Петренко"
-          },
-          "middleName": {
-            "type": "string",
-            "description": "По батькові контакту",
-            "example": "Петрович"
-          },
-          "inn": {
-            "type": "string",
-            "description": "ІПН (РНОКПП) контакту",
-            "example": "3096889974"
-          },
-          "documentType": {
-            "$ref": "#/components/schemas/DocumentType"
-          },
-          "documentNumber": {
-            "type": "string",
-            "description": "Номер документа",
-            "example": "123456"
-          },
-          "documentSeries": {
-            "type": "string",
-            "description": "Серія документа (якщо застосовується)",
-            "example": "АБ"
-          },
-          "iban": {
-            "type": "string",
-            "description": "IBAN рахунку контакту",
-            "example": "UA293220010000026000000000001"
-          },
-          "pan": {
-            "type": "string",
-            "description": "Номер картки контакту",
-            "example": "4149499324892051"
-          }
-        }
-      },
-      "ContactDocument": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "$ref": "#/components/schemas/DocumentType"
-          },
-          "series": {
-            "type": "string",
-            "description": "Серія документа (якщо застосовується)",
-            "example": "АБ"
-          },
-          "number": {
-            "type": "string",
-            "description": "Номер документа",
-            "example": "123456"
-          }
-        }
-      },
-      "SalaryRegistryCreatedResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Унікальний ідентифікатор створеного зарплатного реєстру",
-            "example": "123e4567-e89b-12d3-a456-426614174000"
-          },
-          "state": {
-            "type": "string",
-            "description": "Статус зарплатного реєстру",
-            "example": "SAVED"
-          },
-          "createTimestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Дата та час створення зарплатного реєстру",
-            "example": "2025-08-15T10:30:00Z"
-          }
-        }
-      },
-      "SalaryRegistryStatusResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "description": "Поточний статус зарплатного реєстру",
-            "example": "FAIL",
-            "enum": [
-              "SAVED",
-              "IN_PROGRESS",
-              "PREPARED",
-              "CHANGE_REQUIRED",
-              "FAIL",
-              "PAYMENTS_DONE"
-            ]
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Дата та час останнього оновлення статусу",
-            "example": "2025-08-15T11:45:00Z"
-          },
-          "declineReason": {
-            "type": "string",
-            "description": "Причина відхилення (якщо статус FAIL)",
-            "example": "Відхилено банком"
-          }
-        }
-      },
-      "SalaryRegistryTypeResponse": {
-        "type": "object",
-        "properties": {
-          "alias": {
-            "type": "string",
-            "description": "Значення типу зарплатної відомості",
-            "example": "SALARY_ADVANCE"
-          },
-          "description": {
-            "type": "string",
-            "description": "Опис типу зарплатного реєстру",
-            "example": "Аванс по зарплаті"
-          }
-        }
-      },
-      "CreateSalaryRegistryRequest": {
-        "type": "object",
-        "required": [
-          "registryName",
-          "senderIban",
-          "salaryRegistryType",
-          "from",
-          "to",
-          "recipients"
-        ],
-        "properties": {
-          "registryName": {
-            "type": "string",
-            "description": "Назва зарплатного реєстру",
-            "example": "Заробітна плата за серпень 2025"
-          },
-          "senderIban": {
-            "type": "string",
-            "description": "IBAN рахунку, з якого буде здійснено виплати",
-            "example": "UA293220010000026000000000001"
-          },
-          "salaryRegistryType": {
-            "type": "string",
-            "description": "Тип зарплатного реєстру. Повний список доступних типів можна отримати в [API типів реєстрів](#tag/salary-registry/operation/get-salary-registries-types)",
-            "example": "salary"
-          },
-          "from": {
-            "type": "string",
-            "format": "date",
-            "description": "Початок періоду, за який здійснюється виплата (формат YYYY-MM-DD)",
-            "example": "2025-08-01"
-          },
-          "to": {
-            "type": "string",
-            "format": "date",
-            "description": "Кінець періоду, за який здійснюється виплата (формат YYYY-MM-DD)",
-            "example": "2025-08-31"
-          },
-          "recipients": {
-            "type": "array",
-            "description": "Список отримувачів зарплати",
-            "items": {
-              "$ref": "#/components/schemas/SalaryRecipientModel"
-            }
-          }
-        }
-      },
-      "SalaryRecipientModel": {
-        "type": "object",
-        "required": [
-          "fullName",
-          "inn",
-          "document",
-          "iban",
-          "amount"
-        ],
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "description": "Повне ім'я отримувача (прізвище, ім'я, по батькові)",
-            "example": "Петренко Петро Петрович"
-          },
-          "inn": {
-            "type": "string",
-            "description": "ІПН (РНОКПП) отримувача",
-            "example": "3096889974"
-          },
-          "document": {
-            "$ref": "#/components/schemas/ContactDocument"
-          },
-          "iban": {
-            "type": "string",
-            "description": "IBAN рахунку отримувача",
-            "example": "UA213223130000026007233566001"
-          },
-          "amount": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Сума виплати в мінімальних одиницях валюти (копійках, центах)",
-            "minimum": 1,
-            "maximum": 10000000000
-          }
-        }
-      }
-    }
-  },
-  "default": {
-    "openapi": "3.0.1",
-    "info": {
-      "title": "API для роботи з рахунками юридичних осіб",
-      "version": "1.0.0",
-      "x-logo": {
-        "url": "./logo.png"
-      },
-      "description": "## Початок роботи\nДля надання доступу потрібно пройти авторизацію у [web кабінеті](http://web.monobank.ua/?modal=tokens) по обраній компанії та отримати токен для персонального використання.\nЯкщо у вас є запитання щодо роботи API, запрошуємо до ком'юніті у [Telegram-групі](REDACTED_TGLINK).\n## Ліміти на запити\nДля кожного клієнта встановлені ліміти на кількість запитів. Якщо клієнт перевищує ліміт, то він отримає відповідь з помилкою **429 Too Many Requests**.\nЛіміти встановлені на кожну компанію окремо. Якщо клієнт перевищує ліміт, то він може звернутися до служби підтримки для збільшення ліміту.\nПоточний ліміт можна побачити в відповіді будь-якого сервіса в заголовку **x-rate-limit-remaining**.\nЯкщо ліміт вичерпаний, то буде повернутий заголовок **x-rate-Limit-retry-after-seconds** з часом (в секундах), через який можна повторити запит.\n"
-    },
-    "servers": [
-      {
-        "url": "https://corp-api.monobank.ua",
-        "description": "Production server"
-      }
-    ],
-    "paths": {
-      "/ext/v1/salary-contacts": {
-        "get": {
-          "tags": [
-            "salary-contacts"
-          ],
-          "operationId": "get-salary-contacts",
-          "summary": "Отримання зарплатних контактів з пагінацією",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "limit",
-              "in": "query",
-              "description": "Максимальна кількість записів у відповіді",
-              "required": false,
-              "schema": {
-                "maximum": 500,
-                "minimum": 1,
-                "type": "integer",
-                "format": "int32",
-                "default": 100
-              }
-            },
-            {
-              "name": "offset",
-              "in": "query",
-              "description": "Зміщення від початку списку результатів",
-              "required": false,
-              "schema": {
-                "minimum": 0,
-                "type": "integer",
-                "format": "int32",
-                "default": 0
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/SalaryContactPageResponse"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        },
-        "post": {
-          "tags": [
-            "salary-contacts"
-          ],
-          "operationId": "create-salary-contact",
-          "summary": "Створення нового зарплатного контакту",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "description": "Дані нового зарплатного контакту",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SalaryContactRequest"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {}
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/salary-contacts/search": {
-        "get": {
-          "tags": [
-            "salary-contacts"
-          ],
-          "operationId": "search-salary-contacts",
-          "summary": "Пошук зарплатних контактів з пагінацією",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "query",
-              "in": "query",
-              "description": "Пошуковий запит для знаходження контактів. Може містити:\n* ІПН - індивідуальний податковий номер (РНОКПП) контакту, наприклад: \"3096889974\"\n* Номер документа - серія та номер паспорта або іншого документа, наприклад: \"АБ123456\"\n* ПІБ - повне ім'я контакту (прізвище, ім'я, по батькові), наприклад: \"Петренко Петро Петрович\"\n* PAN картки - повний або частковий номер платіжної картки, наприклад: \"4149499324892051\"\n* IBAN - номер рахунку в форматі IBAN, наприклад: \"UA213223130000026007233566001\"\n",
-              "required": false,
-              "schema": {
-                "type": "string",
-                "minLength": 3
-              },
-              "examples": {
-                "inn": {
-                  "value": "3096889974",
-                  "summary": "Пошук за ІПН"
-                },
-                "iban": {
-                  "value": "UA213223130000026007233566001",
-                  "summary": "Пошук за IBAN"
-                },
-                "document": {
-                  "value": "АБ123456",
-                  "summary": "Пошук за номером документа"
-                },
-                "fullName": {
-                  "value": "Петренко Петро Петрович",
-                  "summary": "Пошук за ПІБ"
-                },
-                "cardPan": {
-                  "value": "4149499324892051",
-                  "summary": "Пошук за номером картки"
-                }
-              }
-            },
-            {
-              "name": "limit",
-              "in": "query",
-              "description": "Максимальна кількість записів у відповіді",
-              "required": false,
-              "schema": {
-                "maximum": 500,
-                "minimum": 1,
-                "type": "integer",
-                "format": "int32",
-                "default": 100
-              }
-            },
-            {
-              "name": "offset",
-              "in": "query",
-              "description": "Зміщення від початку списку результатів",
-              "required": false,
-              "schema": {
-                "minimum": 0,
-                "type": "integer",
-                "format": "int32",
-                "default": 0
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/SalaryContactPageResponse"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/salary-contacts/{id}": {
-        "get": {
-          "tags": [
-            "salary-contacts"
-          ],
-          "operationId": "get-salary-contact-by-id",
-          "summary": "Отримання інформації про зарплатний контакт за ідентифікатором",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "id",
-              "in": "path",
-              "description": "Унікальний ідентифікатор контакту",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "example": "123e4567-e89b-12d3-a456-426614174000"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/SalaryContactResponse"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        },
-        "delete": {
-          "tags": [
-            "salary-contacts"
-          ],
-          "operationId": "delete-salary-contact-by-id",
-          "summary": "Видалення зарплатного контакту за ідентифікатором",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "id",
-              "in": "path",
-              "description": "Унікальний ідентифікатор контакту",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "example": "123e4567-e89b-12d3-a456-426614174000"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {}
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/salary-contacts/batch": {
-        "delete": {
-          "tags": [
-            "salary-contacts"
-          ],
-          "operationId": "delete-salary-contacts-batch",
-          "summary": "Видалення зарплатних контактів по їх ідентифікаторах",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "description": "Список ідентифікаторів контактів для видалення",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteSalaryContactsRequest"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {}
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/payments/salary/registries": {
-        "post": {
-          "tags": [
-            "salary-registry"
-          ],
-          "operationId": "create-salary-registries",
-          "summary": "Створення зарплатної відомості",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "idempotency-key",
-              "in": "header",
-              "description": "Параметр потрібен для підтримки ідемпотентності. Якщо виникає будь-яка помилка мережі, запит з однаковим параметром можна повторювати, не боячись створити дублікат. Рекомендується використовувати UUID v4.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "description": "Дані нового зарплатного реєстру",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateSalaryRegistryRequest"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/SalaryRegistryCreatedResponse"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/payments/salary/registries/types": {
-        "get": {
-          "tags": [
-            "salary-registry"
-          ],
-          "operationId": "get-salary-registries-types",
-          "summary": "Отримання типів зарплатних відомостей",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/SalaryRegistryTypeResponse"
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/payments/salary/registries/{id}/status": {
-        "get": {
-          "tags": [
-            "salary-registry"
-          ],
-          "operationId": "get-salary-registries-status",
-          "summary": "Отримання статусу зарплатної відомості за її ідентифікатором",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "id",
-              "in": "path",
-              "description": "Унікальний ідентифікатор зарплатного реєстру",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/SalaryRegistryStatusResponse",
-                    "properties": {}
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/statement/{account}/{from}/{to}": {
-        "get": {
-          "tags": [
-            "statement-operations"
-          ],
-          "operationId": "get-statement",
-          "summary": "Отримання виписки по рахунку",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "account",
-              "in": "path",
-              "description": "IBAN рахунку по якому треба отримати виписку",
-              "required": true,
-              "example": "UA293220010000026000000000001",
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "from",
-              "in": "path",
-              "description": "Час та дата від яких треба повертати операції в секундах в форматі [Unix time](https://en.wikipedia.org/wiki/Unix_time)",
-              "required": true,
-              "example": 1719472800,
-              "schema": {
-                "type": "integer",
-                "format": "int64"
-              }
-            },
-            {
-              "name": "to",
-              "in": "path",
-              "description": "Час та дата до яких треба повертати операції в секундах в форматі [Unix time](https://en.wikipedia.org/wiki/Unix_time). Якщо параметр не заданий, то буде підставлено поточний час",
-              "required": false,
-              "example": 1719472805,
-              "schema": {
-                "type": "integer",
-                "format": "int64"
-              }
-            },
-            {
-              "name": "direction",
-              "in": "query",
-              "description": "Сортування. UP - Спочатку повертати нові операції, DOWN - спочатку повертати старі операції",
-              "required": false,
-              "deprecated": true,
-              "schema": {
-                "type": "string",
-                "default": "DOWN",
-                "enum": [
-                  "UP",
-                  "DOWN"
-                ]
-              }
-            },
-            {
-              "name": "limit",
-              "in": "query",
-              "description": "Ліміт операцій, які треба повернути",
-              "required": false,
-              "schema": {
-                "maximum": 500,
-                "minimum": 1,
-                "type": "integer",
-                "format": "int32",
-                "default": 10
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/StatementItem"
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/statement": {
-        "get": {
-          "tags": [
-            "statement-operations"
-          ],
-          "operationId": "get-payment-from-statement",
-          "summary": "Отримання інформації по операції за ідентифікатором",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "id",
-              "in": "query",
-              "description": "Ідентифікатор платежу",
-              "required": true,
-              "example": "39425792-dd96-4b7d-8f6b-6cd17ec14ecc",
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/StatementItem"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            }
-          }
-        }
-      },
-      "/ext/v1/payment/prepare": {
-        "post": {
-          "tags": [
-            "payment-operations"
-          ],
-          "operationId": "prepare-payment",
-          "summary": "Підготувати платіж та відправити на підпис",
-          "requestBody": {
-            "required": true,
-            "description": "Опис платежу, який треба створити",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePaymentRequest"
-                }
-              }
-            }
-          },
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "idempotency-key",
-              "in": "header",
-              "description": "Параметр потрібен для підтримки [ідемпотентності](https://en.wikipedia.org/wiki/Idempotence). Якщо виникає будь-яка помилка мережі, то запит з однаковим параметром **idempotency-key** можна повторювати не боячись створити другий платіж. Клієнт має генерувати унікальне значення параметру для кожного унікального платежу. Алгоритм створення такого ключа клієнт реалізує на свій розсуд, але зі своєї сторони рекомендуємо використовувати [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier)",
-              "required": true,
-              "schema": {
-                "maxLength": 256,
-                "minLength": 3,
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/CreatePaymentResponse"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            }
-          }
-        }
-      },
-      "/ext/v1/payment/{id}/state": {
-        "get": {
-          "tags": [
-            "payment-operations"
-          ],
-          "operationId": "get-payment-state",
-          "summary": "Отримання стану платежу за ідентифікатором",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "id",
-              "in": "path",
-              "description": "Ідентифікатор платежу",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "Дані по платежу знайдені",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/GetPaymentStateResponse"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            }
-          }
-        }
-      },
-      "/ext/v1/accounts": {
-        "get": {
-          "tags": [
-            "account-details"
-          ],
-          "operationId": "get-all-accounts",
-          "summary": "Отримання усіх рахунків компанії",
-          "parameters": [
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/Account"
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      },
-      "/ext/v1/accounts/{IBAN}": {
-        "get": {
-          "tags": [
-            "account-details"
-          ],
-          "operationId": "get-account",
-          "summary": "Отримання рахунку за його IBAN",
-          "parameters": [
-            {
-              "name": "IBAN",
-              "in": "path",
-              "schema": {
-                "type": "string"
-              },
-              "required": true,
-              "description": "IBAN рахунку, дані якого треба знайти"
-            },
-            {
-              "name": "accept",
-              "in": "header",
-              "description": "Тип відповіді, який очікує клієнт.",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "application/json"
-                ]
-              }
-            },
-            {
-              "name": "x-token",
-              "in": "header",
-              "description": "Токен доступу до API",
-              "required": true,
-              "schema": {
-                "type": "string"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "OK",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/Account"
-                  }
-                }
-              }
-            },
-            "400": {
-              "$ref": "#/components/responses/BadRequest"
-            },
-            "403": {
-              "$ref": "#/components/responses/Forbidden"
-            },
-            "404": {
-              "$ref": "#/components/responses/NotFound"
-            },
-            "406": {
-              "$ref": "#/components/responses/NotAcceptable"
-            },
-            "429": {
-              "$ref": "#/components/responses/TooManyRequests"
-            }
-          }
-        }
-      }
-    },
-    "components": {
-      "responses": {
-        "BadRequest": {
-          "description": "Bad Request (invalid request parameters)",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ErrorResponse"
-              }
-            }
-          }
-        },
-        "Forbidden": {
-          "description": "Forbidden",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ErrorResponse"
-              }
-            }
-          }
-        },
-        "NotFound": {
-          "description": "Data not found",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ErrorResponse"
-              }
-            }
-          }
-        },
-        "NotAcceptable": {
-          "description": "Not Acceptable (invalid Accept header)",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ErrorResponse"
-              }
-            }
-          }
-        },
-        "Conflict": {
-          "description": "Conflict (duplicate request provided)",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ErrorResponse"
-              }
-            }
-          }
-        },
-        "TooManyRequests": {
-          "description": "Too many requests",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ErrorResponse"
-              }
-            }
-          }
-        }
-      },
-      "schemas": {
-        "ErrorResponse": {
-          "type": "object",
-          "properties": {
-            "errorCode": {
-              "type": "string",
-              "description": "Код помилки"
-            },
-            "errorDescription": {
-              "type": "string",
-              "description": "Текст (опис) помилки"
-            }
-          }
-        },
-        "StatementItem": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Ідентифікатор платежу",
-              "example": "ea4f9218-d134-431a-9169-88acab4454c9"
-            },
-            "time": {
-              "type": "integer",
-              "description": "Час транзакції в секундах в форматі Unix time",
-              "format": "int64",
-              "example": 1719472805
-            },
-            "description": {
-              "type": "string",
-              "description": "Призначення операції",
-              "example": "Оплата за щось цікаве 😊"
-            },
-            "amount": {
-              "type": "integer",
-              "format": "int64",
-              "description": "Сума у валюті рахунку в мінімальних одиницях валюти (копійках, центах). Якщо сума від'ємна - то це списання з рахунку. Якщо зі знаком плюс - то поповнення рахунку",
-              "example": 12345
-            },
-            "currencyCode": {
-              "type": "string",
-              "description": "Код валюти рахунку відповідно ISO 4217",
-              "example": "980"
-            },
-            "receiptId": {
-              "type": "string",
-              "description": "Номер квитанции для check.gov.ua. Поле може бути відсутнім",
-              "example": "XXXX-XXXX-XXXX-XXXX"
-            },
-            "counterEdrpou": {
-              "type": "string",
-              "description": "ЄДРПОУ контрагента. Для вхідних операцій - ЄДРПОУ того хто поповнив рахунок. Для вихідних - ЄДРПОУ того, куди були перераховані кошти",
-              "example": 21133352
-            },
-            "counterIban": {
-              "type": "string",
-              "description": "IBAN контрагента. Для вхідних операцій - IBAN рахунок з якого було виконане поповнення. Для вихідних - IBAN рахунок, на який було перераховано кошти",
-              "example": "UA293220010000026000000000001"
-            },
-            "counterName": {
-              "type": "string",
-              "description": "Найменування контрагента. Для вхідних операцій - найменування контрагента, який здійснив поповнення рахунку. Для вихідних - найменування контрагента, якому було перераховано кошти",
-              "example": "ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ ..."
-            },
-            "reverse": {
-              "type": "boolean",
-              "description": "Ознака транзакції реверсу",
-              "example": false
-            },
-            "status": {
-              "type": "string",
-              "description": "Статус операції",
-              "example": "DONE",
-              "enum": [
-                "DONE",
-                "PENDING",
-                "DECLINED"
-              ]
-            }
-          }
-        },
-        "PaymentRequestReceiver": {
-          "type": "object",
-          "required": [
-            "iban",
-            "edrpou",
-            "name"
-          ],
-          "properties": {
-            "iban": {
-              "example": "UA293220010000026000000000001",
-              "type": "string",
-              "description": "IBAN рахунку на який треба перерахувати кошти"
-            },
-            "edrpou": {
-              "example": 21133352,
-              "type": "string",
-              "description": "ЕДРПОУ отримувача коштів"
-            },
-            "name": {
-              "type": "string",
-              "description": "Назва отримувача коштів (назва компанії або ПІБ фізичної особи, якщо платіж на рахунок фізичної особи)"
-            }
-          }
-        },
-        "CreatePaymentRequest": {
-          "type": "object",
-          "required": [
-            "senderIban",
-            "receiver",
-            "destination",
-            "amount",
-            "currency"
-          ],
-          "properties": {
-            "senderIban": {
-              "type": "string",
-              "example": "UA293220010000026000000000001",
-              "description": "IBAN рахунку з якого треба зробити платіж"
-            },
-            "receiver": {
-              "$ref": "#/components/schemas/PaymentRequestReceiver"
-            },
-            "destination": {
-              "type": "string",
-              "example": "some payment destination",
-              "description": "Призначення платежу. Для бюджетних платежів призначення має бути спеціального формату: `{payCode з запиту} {additionalInfo з запиту} ЄДРПОУ {ЄДРПОУ вашої компанії}`",
-              "minLength": 6,
-              "maxLength": 420
-            },
-            "amount": {
-              "type": "integer",
-              "format": "int64",
-              "description": "Сума операції в мінімальних одиницях валюти (копійках, центах)",
-              "minimum": 1,
-              "maximum": 10000000000
-            },
-            "currency": {
-              "type": "string",
-              "description": "Код валюти операції відповідно ISO 4217. На даний момент єдина можлива валюта - 980 (гривня)",
-              "example": "980"
-            },
-            "payCode": {
-              "type": "string",
-              "example": "058",
-              "description": "[Код оплати](https://unifinance.ua/perechen-kodov-vidov-oplat-nalogov/) (необхідний для створення бюджетного платежу)",
-              "minLength": 3,
-              "maxLength": 3
-            },
-            "additionalInfo": {
-              "type": "string",
-              "pattern": ".{6,130}",
-              "description": "Додаткова інформація платежу (потрібна для створення бюджетного платежу)"
-            }
-          }
-        },
-        "CreatePaymentResponse": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Ідентифікатор платежу"
-            }
-          }
-        },
-        "GetPaymentStateResponse": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Ідентифікатор платежу"
-            },
-            "state": {
-              "type": "string",
-              "enum": [
-                "DRAFT",
-                "DECLINED",
-                "IN_STATEMENT"
-              ],
-              "description": "Поточний стан платежу: * `DRAFT` - Платіж створений клієнтом, але ще не відправлений на обробку. * `DECLINED` - Підготовлений платіж був відхилений (скасований клієнтом до підписання або з інших причин). Платіж з цим статусом не піде в обробку. * `IN_STATEMENT` - Платіж пішов в обробку. Щоб побачити детальний статус транзакції з категорії IN_STATEMENT, використовуйте деталізацію виписки за ідентифікатором транзакції.\n"
-            }
-          }
-        },
-        "Account": {
-          "type": "object",
-          "properties": {
-            "iban": {
-              "type": "string",
-              "description": "IBAN рахунку",
-              "example": "UA293220010000026002700000002"
-            },
-            "currency": {
-              "type": "integer",
-              "description": "Код валюти рахунку згідно зі стандартом ISO 4217 (980 - гривня, 840 - долар США, 978 - євро)",
-              "example": 980
-            },
-            "balance": {
-              "type": "number",
-              "description": "Поточний баланс рахунку в одиницях відповідної валюти",
-              "example": 42
-            }
-          }
-        },
-        "DocumentType": {
-          "type": "string",
-          "description": "Тип документа",
-          "enum": [
-            "OLD_PASSPORT",
-            "ID_CARD",
-            "FOREIGN_PASSPORT"
-          ]
-        },
-        "SalaryContactResponse": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "description": "Унікальний ідентифікатор контакту",
-              "example": "123e4567-e89b-12d3-a456-426614174000"
-            },
-            "leClientID": {
-              "type": "integer",
-              "format": "int64",
-              "description": "Ідентифікатор клієнта в системі банку",
-              "example": 12345678
-            },
-            "fullName": {
-              "type": "string",
-              "description": "Повне ім'я контакту (прізвище, ім'я, по батькові)",
-              "example": "Петренко Петро Петрович"
-            },
-            "inn": {
-              "type": "string",
-              "description": "ІПН (РНОКПП) контакту",
-              "example": "3096889974"
-            },
-            "documentType": {
-              "$ref": "#/components/schemas/DocumentType"
-            },
-            "documentNumber": {
-              "type": "string",
-              "description": "Номер документа контакту",
-              "example": "123456"
-            },
-            "documentSeries": {
-              "type": "string",
-              "description": "Серія документа контакту (якщо застосовується)",
-              "example": "АБ"
-            },
-            "iban": {
-              "type": "string",
-              "description": "IBAN рахунку контакту",
-              "example": "UA213223130000026007233566001"
-            },
-            "pan": {
-              "type": "string",
-              "description": "Маскований номер картки контакту",
-              "example": "4444****18"
-            }
-          }
-        },
-        "SalaryContactPageResponse": {
-          "type": "object",
-          "properties": {
-            "hasMore": {
-              "type": "boolean",
-              "description": "Ознака наявності наступної сторінки результатів"
-            },
-            "contacts": {
-              "type": "array",
-              "description": "Список знайдених контактів",
-              "items": {
-                "$ref": "#/components/schemas/SalaryContactResponse"
-              }
-            }
-          }
-        },
-        "DeleteSalaryContactsRequest": {
-          "type": "object",
-          "properties": {
-            "ids": {
-              "type": "array",
-              "description": "Список ідентифікаторів контактів для видалення",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "minItems": 1,
-              "example": [
-                "123e4567-e89b-12d3-a456-426614174000",
-                "223e4567-e89b-12d3-a456-426614174000"
-              ]
-            }
-          }
-        },
-        "SalaryContactRequest": {
-          "type": "object",
-          "properties": {
-            "firstName": {
-              "type": "string",
-              "description": "Ім'я контакту",
-              "example": "Петро"
-            },
-            "lastName": {
-              "type": "string",
-              "description": "Прізвище контакту",
-              "example": "Петренко"
-            },
-            "middleName": {
-              "type": "string",
-              "description": "По батькові контакту",
-              "example": "Петрович"
-            },
-            "inn": {
-              "type": "string",
-              "description": "ІПН (РНОКПП) контакту",
-              "example": "3096889974"
-            },
-            "documentType": {
-              "$ref": "#/components/schemas/DocumentType"
-            },
-            "documentNumber": {
-              "type": "string",
-              "description": "Номер документа",
-              "example": "123456"
-            },
-            "documentSeries": {
-              "type": "string",
-              "description": "Серія документа (якщо застосовується)",
-              "example": "АБ"
-            },
-            "iban": {
-              "type": "string",
-              "description": "IBAN рахунку контакту",
-              "example": "UA293220010000026000000000001"
-            },
-            "pan": {
-              "type": "string",
-              "description": "Номер картки контакту",
-              "example": "4149499324892051"
-            }
-          }
-        },
-        "ContactDocument": {
-          "type": "object",
-          "properties": {
-            "type": {
-              "$ref": "#/components/schemas/DocumentType"
-            },
-            "series": {
-              "type": "string",
-              "description": "Серія документа (якщо застосовується)",
-              "example": "АБ"
-            },
-            "number": {
-              "type": "string",
-              "description": "Номер документа",
-              "example": "123456"
-            }
-          }
-        },
-        "SalaryRegistryCreatedResponse": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "description": "Унікальний ідентифікатор створеного зарплатного реєстру",
-              "example": "123e4567-e89b-12d3-a456-426614174000"
-            },
-            "state": {
-              "type": "string",
-              "description": "Статус зарплатного реєстру",
-              "example": "SAVED"
-            },
-            "createTimestamp": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Дата та час створення зарплатного реєстру",
-              "example": "2025-08-15T10:30:00Z"
-            }
-          }
-        },
-        "SalaryRegistryStatusResponse": {
-          "type": "object",
-          "properties": {
-            "status": {
-              "type": "string",
-              "description": "Поточний статус зарплатного реєстру",
-              "example": "FAIL",
-              "enum": [
-                "SAVED",
-                "IN_PROGRESS",
-                "PREPARED",
-                "CHANGE_REQUIRED",
-                "FAIL",
-                "PAYMENTS_DONE"
-              ]
-            },
-            "updatedAt": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Дата та час останнього оновлення статусу",
-              "example": "2025-08-15T11:45:00Z"
-            },
-            "declineReason": {
-              "type": "string",
-              "description": "Причина відхилення (якщо статус FAIL)",
-              "example": "Відхилено банком"
-            }
-          }
-        },
-        "SalaryRegistryTypeResponse": {
-          "type": "object",
-          "properties": {
-            "alias": {
-              "type": "string",
-              "description": "Значення типу зарплатної відомості",
-              "example": "SALARY_ADVANCE"
-            },
-            "description": {
-              "type": "string",
-              "description": "Опис типу зарплатного реєстру",
-              "example": "Аванс по зарплаті"
-            }
-          }
-        },
-        "CreateSalaryRegistryRequest": {
-          "type": "object",
-          "required": [
-            "registryName",
-            "senderIban",
-            "salaryRegistryType",
-            "from",
-            "to",
-            "recipients"
-          ],
-          "properties": {
-            "registryName": {
-              "type": "string",
-              "description": "Назва зарплатного реєстру",
-              "example": "Заробітна плата за серпень 2025"
-            },
-            "senderIban": {
-              "type": "string",
-              "description": "IBAN рахунку, з якого буде здійснено виплати",
-              "example": "UA293220010000026000000000001"
-            },
-            "salaryRegistryType": {
-              "type": "string",
-              "description": "Тип зарплатного реєстру. Повний список доступних типів можна отримати в [API типів реєстрів](#tag/salary-registry/operation/get-salary-registries-types)",
-              "example": "salary"
-            },
-            "from": {
-              "type": "string",
-              "format": "date",
-              "description": "Початок періоду, за який здійснюється виплата (формат YYYY-MM-DD)",
-              "example": "2025-08-01"
-            },
-            "to": {
-              "type": "string",
-              "format": "date",
-              "description": "Кінець періоду, за який здійснюється виплата (формат YYYY-MM-DD)",
-              "example": "2025-08-31"
-            },
-            "recipients": {
-              "type": "array",
-              "description": "Список отримувачів зарплати",
-              "items": {
-                "$ref": "#/components/schemas/SalaryRecipientModel"
-              }
-            }
-          }
-        },
-        "SalaryRecipientModel": {
-          "type": "object",
-          "required": [
-            "fullName",
-            "inn",
-            "document",
-            "iban",
-            "amount"
-          ],
-          "properties": {
-            "fullName": {
-              "type": "string",
-              "description": "Повне ім'я отримувача (прізвище, ім'я, по батькові)",
-              "example": "Петренко Петро Петрович"
-            },
-            "inn": {
-              "type": "string",
-              "description": "ІПН (РНОКПП) отримувача",
-              "example": "3096889974"
-            },
-            "document": {
-              "$ref": "#/components/schemas/ContactDocument"
-            },
-            "iban": {
-              "type": "string",
-              "description": "IBAN рахунку отримувача",
-              "example": "UA213223130000026007233566001"
-            },
-            "amount": {
-              "type": "integer",
-              "format": "int64",
-              "description": "Сума виплати в мінімальних одиницях валюти (копійках, центах)",
-              "minimum": 1,
-              "maximum": 10000000000
-            }
-          }
-        }
-      }
-    },
-    "tags": [
-      {
-        "name": "statement-operations",
-        "x-displayName": "Виписка рахунку"
-      },
-      {
-        "name": "payment-operations",
-        "x-displayName": "Операції з платежами"
-      },
-      {
-        "name": "account-details",
-        "x-displayName": "Деталі рахунку"
-      },
-      {
-        "name": "salary-contacts",
-        "x-displayName": "Зарплатні контакти"
-      },
-      {
-        "name": "salary-registry",
-        "x-displayName": "Виплата зарплатні"
-      }
-    ],
-    "x-tagGroups": [
-      {
-        "name": "Основні операції",
-        "tags": [
-          "statement-operations",
-          "payment-operations",
-          "account-details"
-        ]
-      },
-      {
-        "name": "Зарплата",
-        "tags": [
-          "salary-contacts",
-          "salary-registry"
-        ]
-      }
-    ]
-  },
+  "openapi": "3.0.1",
   "info": {
     "title": "API для роботи з рахунками юридичних осіб",
     "version": "1.0.0",
@@ -2362,7 +8,6 @@
     },
     "description": "## Початок роботи\nДля надання доступу потрібно пройти авторизацію у [web кабінеті](http://web.monobank.ua/?modal=tokens) по обраній компанії та отримати токен для персонального використання.\nЯкщо у вас є запитання щодо роботи API, запрошуємо до ком'юніті у [Telegram-групі](REDACTED_TGLINK).\n## Ліміти на запити\nДля кожного клієнта встановлені ліміти на кількість запитів. Якщо клієнт перевищує ліміт, то він отримає відповідь з помилкою **429 Too Many Requests**.\nЛіміти встановлені на кожну компанію окремо. Якщо клієнт перевищує ліміт, то він може звернутися до служби підтримки для збільшення ліміту.\nПоточний ліміт можна побачити в відповіді будь-якого сервіса в заголовку **x-rate-limit-remaining**.\nЯкщо ліміт вичерпаний, то буде повернутий заголовок **x-rate-Limit-retry-after-seconds** з часом (в секундах), через який можна повторити запит.\n"
   },
-  "openapi": "3.0.1",
   "paths": {
     "/ext/v1/salary-contacts": {
       "get": {
@@ -3535,5 +1180,582 @@
       "name": "salary-registry",
       "x-displayName": "Виплата зарплатні"
     }
-  ]
+  ],
+  "components": {
+    "responses": {
+      "BadRequest": {
+        "description": "Bad Request (invalid request parameters)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Data not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotAcceptable": {
+        "description": "Not Acceptable (invalid Accept header)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict (duplicate request provided)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "errorCode": {
+            "type": "string",
+            "description": "Код помилки"
+          },
+          "errorDescription": {
+            "type": "string",
+            "description": "Текст (опис) помилки"
+          }
+        }
+      },
+      "StatementItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Ідентифікатор платежу",
+            "example": "ea4f9218-d134-431a-9169-88acab4454c9"
+          },
+          "time": {
+            "type": "integer",
+            "description": "Час транзакції в секундах в форматі Unix time",
+            "format": "int64",
+            "example": 1719472805
+          },
+          "description": {
+            "type": "string",
+            "description": "Призначення операції",
+            "example": "Оплата за щось цікаве 😊"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у валюті рахунку в мінімальних одиницях валюти (копійках, центах). Якщо сума від'ємна - то це списання з рахунку. Якщо зі знаком плюс - то поповнення рахунку",
+            "example": 12345
+          },
+          "currencyCode": {
+            "type": "string",
+            "description": "Код валюти рахунку відповідно ISO 4217",
+            "example": "980"
+          },
+          "receiptId": {
+            "type": "string",
+            "description": "Номер квитанции для check.gov.ua. Поле може бути відсутнім",
+            "example": "XXXX-XXXX-XXXX-XXXX"
+          },
+          "counterEdrpou": {
+            "type": "string",
+            "description": "ЄДРПОУ контрагента. Для вхідних операцій - ЄДРПОУ того хто поповнив рахунок. Для вихідних - ЄДРПОУ того, куди були перераховані кошти",
+            "example": 21133352
+          },
+          "counterIban": {
+            "type": "string",
+            "description": "IBAN контрагента. Для вхідних операцій - IBAN рахунок з якого було виконане поповнення. Для вихідних - IBAN рахунок, на який було перераховано кошти",
+            "example": "UA293220010000026000000000001"
+          },
+          "counterName": {
+            "type": "string",
+            "description": "Найменування контрагента. Для вхідних операцій - найменування контрагента, який здійснив поповнення рахунку. Для вихідних - найменування контрагента, якому було перераховано кошти",
+            "example": "ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ ..."
+          },
+          "reverse": {
+            "type": "boolean",
+            "description": "Ознака транзакції реверсу",
+            "example": false
+          },
+          "status": {
+            "type": "string",
+            "description": "Статус операції",
+            "example": "DONE",
+            "enum": [
+              "DONE",
+              "PENDING",
+              "DECLINED"
+            ]
+          }
+        }
+      },
+      "PaymentRequestReceiver": {
+        "type": "object",
+        "required": [
+          "iban",
+          "edrpou",
+          "name"
+        ],
+        "properties": {
+          "iban": {
+            "example": "UA293220010000026000000000001",
+            "type": "string",
+            "description": "IBAN рахунку на який треба перерахувати кошти"
+          },
+          "edrpou": {
+            "example": 21133352,
+            "type": "string",
+            "description": "ЕДРПОУ отримувача коштів"
+          },
+          "name": {
+            "type": "string",
+            "description": "Назва отримувача коштів (назва компанії або ПІБ фізичної особи, якщо платіж на рахунок фізичної особи)"
+          }
+        }
+      },
+      "CreatePaymentRequest": {
+        "type": "object",
+        "required": [
+          "senderIban",
+          "receiver",
+          "destination",
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "senderIban": {
+            "type": "string",
+            "example": "UA293220010000026000000000001",
+            "description": "IBAN рахунку з якого треба зробити платіж"
+          },
+          "receiver": {
+            "$ref": "#/components/schemas/PaymentRequestReceiver"
+          },
+          "destination": {
+            "type": "string",
+            "example": "some payment destination",
+            "description": "Призначення платежу. Для бюджетних платежів призначення має бути спеціального формату: `{payCode з запиту} {additionalInfo з запиту} ЄДРПОУ {ЄДРПОУ вашої компанії}`",
+            "minLength": 6,
+            "maxLength": 420
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума операції в мінімальних одиницях валюти (копійках, центах)",
+            "minimum": 1,
+            "maximum": 10000000000
+          },
+          "currency": {
+            "type": "string",
+            "description": "Код валюти операції відповідно ISO 4217. На даний момент єдина можлива валюта - 980 (гривня)",
+            "example": "980"
+          },
+          "payCode": {
+            "type": "string",
+            "example": "058",
+            "description": "[Код оплати](https://unifinance.ua/perechen-kodov-vidov-oplat-nalogov/) (необхідний для створення бюджетного платежу)",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "additionalInfo": {
+            "type": "string",
+            "pattern": ".{6,130}",
+            "description": "Додаткова інформація платежу (потрібна для створення бюджетного платежу)"
+          }
+        }
+      },
+      "CreatePaymentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Ідентифікатор платежу"
+          }
+        }
+      },
+      "GetPaymentStateResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Ідентифікатор платежу"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "DECLINED",
+              "IN_STATEMENT"
+            ],
+            "description": "Поточний стан платежу: * `DRAFT` - Платіж створений клієнтом, але ще не відправлений на обробку. * `DECLINED` - Підготовлений платіж був відхилений (скасований клієнтом до підписання або з інших причин). Платіж з цим статусом не піде в обробку. * `IN_STATEMENT` - Платіж пішов в обробку. Щоб побачити детальний статус транзакції з категорії IN_STATEMENT, використовуйте деталізацію виписки за ідентифікатором транзакції.\n"
+          }
+        }
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "iban": {
+            "type": "string",
+            "description": "IBAN рахунку",
+            "example": "UA293220010000026002700000002"
+          },
+          "currency": {
+            "type": "integer",
+            "description": "Код валюти рахунку згідно зі стандартом ISO 4217 (980 - гривня, 840 - долар США, 978 - євро)",
+            "example": 980
+          },
+          "balance": {
+            "type": "number",
+            "description": "Поточний баланс рахунку в одиницях відповідної валюти",
+            "example": 42
+          }
+        }
+      },
+      "DocumentType": {
+        "type": "string",
+        "description": "Тип документа",
+        "enum": [
+          "OLD_PASSPORT",
+          "ID_CARD",
+          "FOREIGN_PASSPORT"
+        ]
+      },
+      "SalaryContactResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Унікальний ідентифікатор контакту",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "leClientID": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Ідентифікатор клієнта в системі банку",
+            "example": 12345678
+          },
+          "fullName": {
+            "type": "string",
+            "description": "Повне ім'я контакту (прізвище, ім'я, по батькові)",
+            "example": "Петренко Петро Петрович"
+          },
+          "inn": {
+            "type": "string",
+            "description": "ІПН (РНОКПП) контакту",
+            "example": "3096889974"
+          },
+          "documentType": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "documentNumber": {
+            "type": "string",
+            "description": "Номер документа контакту",
+            "example": "123456"
+          },
+          "documentSeries": {
+            "type": "string",
+            "description": "Серія документа контакту (якщо застосовується)",
+            "example": "АБ"
+          },
+          "iban": {
+            "type": "string",
+            "description": "IBAN рахунку контакту",
+            "example": "UA213223130000026007233566001"
+          },
+          "pan": {
+            "type": "string",
+            "description": "Маскований номер картки контакту",
+            "example": "4444****18"
+          }
+        }
+      },
+      "SalaryContactPageResponse": {
+        "type": "object",
+        "properties": {
+          "hasMore": {
+            "type": "boolean",
+            "description": "Ознака наявності наступної сторінки результатів"
+          },
+          "contacts": {
+            "type": "array",
+            "description": "Список знайдених контактів",
+            "items": {
+              "$ref": "#/components/schemas/SalaryContactResponse"
+            }
+          }
+        }
+      },
+      "DeleteSalaryContactsRequest": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "description": "Список ідентифікаторів контактів для видалення",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "example": [
+              "123e4567-e89b-12d3-a456-426614174000",
+              "223e4567-e89b-12d3-a456-426614174000"
+            ]
+          }
+        }
+      },
+      "SalaryContactRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "Ім'я контакту",
+            "example": "Петро"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Прізвище контакту",
+            "example": "Петренко"
+          },
+          "middleName": {
+            "type": "string",
+            "description": "По батькові контакту",
+            "example": "Петрович"
+          },
+          "inn": {
+            "type": "string",
+            "description": "ІПН (РНОКПП) контакту",
+            "example": "3096889974"
+          },
+          "documentType": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "documentNumber": {
+            "type": "string",
+            "description": "Номер документа",
+            "example": "123456"
+          },
+          "documentSeries": {
+            "type": "string",
+            "description": "Серія документа (якщо застосовується)",
+            "example": "АБ"
+          },
+          "iban": {
+            "type": "string",
+            "description": "IBAN рахунку контакту",
+            "example": "UA293220010000026000000000001"
+          },
+          "pan": {
+            "type": "string",
+            "description": "Номер картки контакту",
+            "example": "4149499324892051"
+          }
+        }
+      },
+      "ContactDocument": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "series": {
+            "type": "string",
+            "description": "Серія документа (якщо застосовується)",
+            "example": "АБ"
+          },
+          "number": {
+            "type": "string",
+            "description": "Номер документа",
+            "example": "123456"
+          }
+        }
+      },
+      "SalaryRegistryCreatedResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Унікальний ідентифікатор створеного зарплатного реєстру",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "state": {
+            "type": "string",
+            "description": "Статус зарплатного реєстру",
+            "example": "SAVED"
+          },
+          "createTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата та час створення зарплатного реєстру",
+            "example": "2025-08-15T10:30:00Z"
+          }
+        }
+      },
+      "SalaryRegistryStatusResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Поточний статус зарплатного реєстру",
+            "example": "FAIL",
+            "enum": [
+              "SAVED",
+              "IN_PROGRESS",
+              "PREPARED",
+              "CHANGE_REQUIRED",
+              "FAIL",
+              "PAYMENTS_DONE"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата та час останнього оновлення статусу",
+            "example": "2025-08-15T11:45:00Z"
+          },
+          "declineReason": {
+            "type": "string",
+            "description": "Причина відхилення (якщо статус FAIL)",
+            "example": "Відхилено банком"
+          }
+        }
+      },
+      "SalaryRegistryTypeResponse": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "description": "Значення типу зарплатної відомості",
+            "example": "SALARY_ADVANCE"
+          },
+          "description": {
+            "type": "string",
+            "description": "Опис типу зарплатного реєстру",
+            "example": "Аванс по зарплаті"
+          }
+        }
+      },
+      "CreateSalaryRegistryRequest": {
+        "type": "object",
+        "required": [
+          "registryName",
+          "senderIban",
+          "salaryRegistryType",
+          "from",
+          "to",
+          "recipients"
+        ],
+        "properties": {
+          "registryName": {
+            "type": "string",
+            "description": "Назва зарплатного реєстру",
+            "example": "Заробітна плата за серпень 2025"
+          },
+          "senderIban": {
+            "type": "string",
+            "description": "IBAN рахунку, з якого буде здійснено виплати",
+            "example": "UA293220010000026000000000001"
+          },
+          "salaryRegistryType": {
+            "type": "string",
+            "description": "Тип зарплатного реєстру. Повний список доступних типів можна отримати в [API типів реєстрів](#tag/salary-registry/operation/get-salary-registries-types)",
+            "example": "salary"
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "Початок періоду, за який здійснюється виплата (формат YYYY-MM-DD)",
+            "example": "2025-08-01"
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "Кінець періоду, за який здійснюється виплата (формат YYYY-MM-DD)",
+            "example": "2025-08-31"
+          },
+          "recipients": {
+            "type": "array",
+            "description": "Список отримувачів зарплати",
+            "items": {
+              "$ref": "#/components/schemas/SalaryRecipientModel"
+            }
+          }
+        }
+      },
+      "SalaryRecipientModel": {
+        "type": "object",
+        "required": [
+          "fullName",
+          "inn",
+          "document",
+          "iban",
+          "amount"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "description": "Повне ім'я отримувача (прізвище, ім'я, по батькові)",
+            "example": "Петренко Петро Петрович"
+          },
+          "inn": {
+            "type": "string",
+            "description": "ІПН (РНОКПП) отримувача",
+            "example": "3096889974"
+          },
+          "document": {
+            "$ref": "#/components/schemas/ContactDocument"
+          },
+          "iban": {
+            "type": "string",
+            "description": "IBAN рахунку отримувача",
+            "example": "UA213223130000026007233566001"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума виплати в мінімальних одиницях валюти (копійках, центах)",
+            "minimum": 1,
+            "maximum": 10000000000
+          }
+        }
+      }
+    }
+  }
 }
