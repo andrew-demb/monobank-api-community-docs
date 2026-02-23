@@ -30,6 +30,8 @@ Monobank Open API - API що доступне публічно (без ауте�
 Посилання на документацію API: https://api.monobank.ua/docs/ (або: https://monobank.ua/api-docs/monobank)
 
 > Див. також OpenAPI specification [open_personal_api.json](specs/open_personal_api.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/open_personal_api.json
 
 ### Корпоративний API для провайдерів послуг
 
@@ -45,6 +47,8 @@ https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-k
 Алгоритм підпису запитів до API ("X-Sign" HTTP header): https://gist.github.com/Sominemo/64845669d6326f2f73d356f025656bdb#signing-the-request
 
 > Див. також OpenAPI specification [open_provider_api.json](specs/open_provider_api.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/open_provider_api.json
 
 #### Блок-схема для визначення чи потрібен Вам API для провайдерів послуг
 
@@ -196,6 +200,8 @@ Monobank надає інформацію щодо існуючих інтегр�
 #### OpenAPI specification
 
 > Див. також [acquiring.json](specs/acquiring.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/acquiring.json
 
 Аналогічно до способу отримання специфікації для Monobank open API (див. вище FAQ).
 
@@ -208,6 +214,8 @@ Monobank надає інформацію щодо існуючих інтегр�
 #### OpenAPI specification
 
 > Див. також [chast.json](specs/chast.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/chast.json
 
 На момент написання цього розділу - при відкритті документації у консолі браузеру - Network - був запит на `https://u2-demo-ext.mono.st4g3.com/v2/api-docs`, де поверталась OpenAPI specification.
 
@@ -229,6 +237,8 @@ OpenAPI specification не може бути представленим, оск�
 Посилання на документацію API: https://corp-api.monobank.ua
 
 > Див. також [legal_entity.json](specs/legal_entity.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/legal_entity.json
 
 ### 5. Open Banking
 
