@@ -2,12 +2,18 @@
   "openapi": "3.0.1",
   "info": {
     "title": "API для роботи з рахунками юридичних осіб",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "x-logo": {
       "url": "./logo.png"
     },
     "description": "## Початок роботи\nДля надання доступу потрібно пройти авторизацію у [web кабінеті](http://web.monobank.ua/?modal=tokens) по обраній компанії та отримати токен для персонального використання.\nЯкщо у вас є запитання щодо роботи API, запрошуємо до ком'юніті у [Telegram-групі](REDACTED_TGLINK).\n## Ліміти на запити\nДля кожного клієнта встановлені ліміти на кількість запитів. Якщо клієнт перевищує ліміт, то він отримає відповідь з помилкою **429 Too Many Requests**.\nЛіміти встановлені на кожну компанію окремо. Якщо клієнт перевищує ліміт, то він може звернутися до служби підтримки для збільшення ліміту.\nПоточний ліміт можна побачити в відповіді будь-якого сервіса в заголовку **x-rate-limit-remaining**.\nЯкщо ліміт вичерпаний, то буде повернутий заголовок **x-rate-Limit-retry-after-seconds** з часом (в секундах), через який можна повторити запит.\n"
   },
+  "servers": [
+    {
+      "url": "https://corp-api.monobank.ua",
+      "description": "Production server"
+    }
+  ],
   "paths": {
     "/ext/v1/salary-contacts": {
       "get": {
@@ -750,7 +756,7 @@
           {
             "name": "to",
             "in": "path",
-            "description": "Час та дата до яких треба повертати операції в секундах в форматі [Unix time](https://en.wikipedia.org/wiki/Unix_time). Якщо параметр не заданий, то буде підставлено поточний час",
+            "description": "Час та дата до яких треба повертати операції в секундах в форматі [Unix time](https://en.wikipedia.org/wiki/Unix_time).\nЯкщо параметр не заданий, то буде підставлено поточний час\n",
             "required": false,
             "example": 1719472805,
             "schema": {
@@ -851,9 +857,19 @@
           {
             "name": "id",
             "in": "query",
-            "description": "Ідентифікатор платежу",
+            "description": "Ідентифікатор платежу. Обов‘язковий якщо externalReference не заданий",
             "required": true,
             "example": "39425792-dd96-4b7d-8f6b-6cd17ec14ecc",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "externalReference",
+            "in": "query",
+            "description": "Ідентифікатор платежу у системі клієнта. Обов‘язковий якщо id не заданий",
+            "required": true,
+            "example": "my-own-pretty-external-reference",
             "schema": {
               "type": "string"
             }
@@ -928,7 +944,7 @@
           {
             "name": "idempotency-key",
             "in": "header",
-            "description": "Параметр потрібен для підтримки [ідемпотентності](https://en.wikipedia.org/wiki/Idempotence). Якщо виникає будь-яка помилка мережі, то запит з однаковим параметром **idempotency-key** можна повторювати не боячись створити другий платіж. Клієнт має генерувати унікальне значення параметру для кожного унікального платежу. Алгоритм створення такого ключа клієнт реалізує на свій розсуд, але зі своєї сторони рекомендуємо використовувати [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier)",
+            "description": "Параметр потрібен для підтримки [ідемпотентності](https://en.wikipedia.org/wiki/Idempotence).\nЯкщо виникає будь-яка помилка мережі, то запит з однаковим параметром **idempotency-key** можна повторювати не\nбоячись створити другий платіж. Клієнт має генерувати унікальне значення параметру для кожного унікального платежу.\nАлгоритм створення такого ключа клієнт реалізує на свій розсуд, але зі своєї сторони рекомендуємо використовувати\n[UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier)\n",
             "required": true,
             "schema": {
               "maxLength": 256,
@@ -993,6 +1009,68 @@
             "name": "id",
             "in": "path",
             "description": "Ідентифікатор платежу",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Дані по платежу знайдені",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPaymentStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          }
+        }
+      }
+    },
+    "/ext/v1/payment/state": {
+      "get": {
+        "tags": [
+          "payment-operations"
+        ],
+        "operationId": "get-payment-state-by-external-reference",
+        "summary": "Отримання стану платежу за зовнішнім ідентифікатором",
+        "parameters": [
+          {
+            "name": "accept",
+            "in": "header",
+            "description": "Тип відповіді, який очікує клієнт.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "application/json"
+              ]
+            }
+          },
+          {
+            "name": "x-token",
+            "in": "header",
+            "description": "Токен доступу до API",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "externalReference",
+            "in": "query",
+            "description": "Ідентифікатор платежу у системі клієнта",
             "required": true,
             "schema": {
               "type": "string"
@@ -1151,36 +1229,103 @@
           }
         }
       }
+    },
+    "/ext/v1/accounts/{iban}/balances": {
+      "get": {
+        "tags": [
+          "account-details"
+        ],
+        "operationId": "get-account-balances",
+        "summary": "Отримання історії балансів рахунку за період",
+        "description": "Сервіс для отримання історії балансів корпоративного рахунку за вказаний період часу.\nПовертає масив балансів на кожну дату в межах зазначеного періоду.\nДля кожної дати вказується поточний баланс та прапорець `isFinal`, який сигналізує про те,\nщо баланс на цю дату більше не зміниться (всі операції за цей день остаточно проведені).\n",
+        "parameters": [
+          {
+            "name": "iban",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "IBAN корпоративного рахунку, для якого необхідно отримати історію балансів",
+            "example": "UA293220010000026002700000002"
+          },
+          {
+            "name": "accept",
+            "in": "header",
+            "description": "Тип відповіді, який очікує клієнт.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "application/json"
+              ]
+            }
+          },
+          {
+            "name": "x-token",
+            "in": "header",
+            "description": "Токен доступу до API",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "description": "Дата початку періоду для отримання історії балансів у форматі ISO 8601 (YYYY-MM-DD)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2025-01-01"
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "description": "Дата кінця періоду для отримання історії балансів у форматі ISO 8601 (YYYY-MM-DD)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2025-01-31"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішно отримано історію балансів. Повертається масив об'єктів з балансами на кожну дату в межах зазначеного періоду",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BalancesResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
     }
   },
-  "servers": [
-    {
-      "url": "https://corp-api.monobank.ua",
-      "description": "Production server"
-    }
-  ],
-  "tags": [
-    {
-      "name": "statement-operations",
-      "x-displayName": "Виписка рахунку"
-    },
-    {
-      "name": "payment-operations",
-      "x-displayName": "Операції з платежами"
-    },
-    {
-      "name": "account-details",
-      "x-displayName": "Деталі рахунку"
-    },
-    {
-      "name": "salary-contacts",
-      "x-displayName": "Зарплатні контакти"
-    },
-    {
-      "name": "salary-registry",
-      "x-displayName": "Виплата зарплатні"
-    }
-  ],
   "components": {
     "responses": {
       "BadRequest": {
@@ -1266,11 +1411,22 @@
             "description": "Ідентифікатор платежу",
             "example": "ea4f9218-d134-431a-9169-88acab4454c9"
           },
+          "externalReference": {
+            "type": "string",
+            "description": "Ідентифікатор платежу у системі клієнта",
+            "example": "my-own-pretty-external-reference"
+          },
           "time": {
             "type": "integer",
-            "description": "Час транзакції в секундах в форматі Unix time",
+            "description": "Час створення транзакції в секундах в форматі Unix time",
             "format": "int64",
             "example": 1719472805
+          },
+          "completedTime": {
+            "type": "integer",
+            "description": "Час проведення транзакції в секундах в форматі Unix time",
+            "format": "int64",
+            "example": 1719577881
           },
           "description": {
             "type": "string",
@@ -1280,7 +1436,7 @@
           "amount": {
             "type": "integer",
             "format": "int64",
-            "description": "Сума у валюті рахунку в мінімальних одиницях валюти (копійках, центах). Якщо сума від'ємна - то це списання з рахунку. Якщо зі знаком плюс - то поповнення рахунку",
+            "description": "Сума у валюті рахунку в мінімальних одиницях валюти (копійках, центах).\nЯкщо сума від'ємна - то це списання з рахунку. Якщо зі знаком плюс - то поповнення рахунку\n",
             "example": 12345
           },
           "currencyCode": {
@@ -1295,18 +1451,17 @@
           },
           "counterEdrpou": {
             "type": "string",
-            "description": "ЄДРПОУ контрагента. Для вхідних операцій - ЄДРПОУ того хто поповнив рахунок. Для вихідних - ЄДРПОУ того, куди були перераховані кошти",
+            "description": "ЄДРПОУ контрагента. Для вхідних операцій - ЄДРПОУ того хто поповнив рахунок.\nДля вихідних - ЄДРПОУ того, куди були перераховані кошти\n",
             "example": 21133352
           },
           "counterIban": {
             "type": "string",
-            "description": "IBAN контрагента. Для вхідних операцій - IBAN рахунок з якого було виконане поповнення. Для вихідних - IBAN рахунок, на який було перераховано кошти",
+            "description": "IBAN контрагента. Для вхідних операцій - IBAN рахунок з якого було виконане поповнення.\nДля вихідних - IBAN рахунок, на який було перераховано кошти\n",
             "example": "UA293220010000026000000000001"
           },
           "counterName": {
             "type": "string",
-            "description": "Найменування контрагента. Для вхідних операцій - найменування контрагента, який здійснив поповнення рахунку. Для вихідних - найменування контрагента, якому було перераховано кошти",
-            "example": "ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ ..."
+            "description": "Найменування контрагента. Для вхідних операцій - найменування контрагента, який здійснив поповнення рахунку.\nДля вихідних - найменування контрагента, якому було перераховано кошти\"\nexample: \"ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ ...\n"
           },
           "reverse": {
             "type": "boolean",
@@ -1370,7 +1525,7 @@
           "destination": {
             "type": "string",
             "example": "some payment destination",
-            "description": "Призначення платежу. Для бюджетних платежів призначення має бути спеціального формату: `{payCode з запиту} {additionalInfo з запиту} ЄДРПОУ {ЄДРПОУ вашої компанії}`",
+            "description": "Призначення платежу. Для бюджетних платежів призначення має бути спеціального формату:\n`{payCode з запиту} {additionalInfo з запиту} ЄДРПОУ {ЄДРПОУ вашої компанії}`\n",
             "minLength": 6,
             "maxLength": 420
           },
@@ -1397,6 +1552,12 @@
             "type": "string",
             "pattern": ".{6,130}",
             "description": "Додаткова інформація платежу (потрібна для створення бюджетного платежу)"
+          },
+          "externalReference": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 256,
+            "description": "унікальний ідентифікатор, що встановлюється клієнтом для відстеження платежу у власних системах та пошуку його у виписці"
           }
         }
       },
@@ -1447,6 +1608,27 @@
           }
         }
       },
+      "BalancesResponse": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата, на яку вказано баланс у форматі ISO 8601 (YYYY-MM-DD)",
+            "example": "2026-01-15"
+          },
+          "balance": {
+            "type": "number",
+            "description": "Баланс рахунку на вказану дату в одиницях відповідної валюти",
+            "example": 47.42
+          },
+          "isFinal": {
+            "type": "boolean",
+            "description": "Прапорець фінальності балансу. Вказує, чи можуть ще відбуватися зміни балансу на вказану дату:\n* `true` - баланс є остаточним, всі операції за цей день проведені, подальші зміни неможливі\n* `false` - баланс може змінитися, оскільки операції за цей день ще обробляються або можуть надійти пізніше\n",
+            "example": false
+          }
+        }
+      },
       "DocumentType": {
         "type": "string",
         "description": "Тип документа",
@@ -1478,7 +1660,7 @@
           },
           "inn": {
             "type": "string",
-            "description": "ІПН (РНОКПП) контакту",
+            "description": "ІПН (РНОКПП) контакту, якщо не вказано документ",
             "example": "3096889974"
           },
           "documentType": {
@@ -1486,7 +1668,7 @@
           },
           "documentNumber": {
             "type": "string",
-            "description": "Номер документа контакту",
+            "description": "Номер документа контакту, якщо не вказано ІПН",
             "example": "123456"
           },
           "documentSeries": {
@@ -1560,7 +1742,7 @@
           },
           "inn": {
             "type": "string",
-            "description": "ІПН (РНОКПП) контакту",
+            "description": "ІПН (РНОКПП) контакту, якщо не вказано документ",
             "example": "3096889974"
           },
           "documentType": {
@@ -1568,7 +1750,7 @@
           },
           "documentNumber": {
             "type": "string",
-            "description": "Номер документа",
+            "description": "Номер документа, якщо не вказано ІПН",
             "example": "123456"
           },
           "documentSeries": {
@@ -1601,7 +1783,7 @@
           },
           "number": {
             "type": "string",
-            "description": "Номер документа",
+            "description": "Номер документа, якщо не вказано ІПН",
             "example": "123456"
           }
         }
@@ -1723,8 +1905,6 @@
         "type": "object",
         "required": [
           "fullName",
-          "inn",
-          "document",
           "iban",
           "amount"
         ],
@@ -1736,11 +1916,21 @@
           },
           "inn": {
             "type": "string",
-            "description": "ІПН (РНОКПП) отримувача",
+            "description": "ІПН (РНОКПП) отримувача, якщо не вказано документ",
             "example": "3096889974"
           },
-          "document": {
-            "$ref": "#/components/schemas/ContactDocument"
+          "documentType": {
+            "$ref": "#/components/schemas/DocumentType"
+          },
+          "documentNumber": {
+            "type": "string",
+            "description": "Номер документа, якщо не вказано ІПН",
+            "example": "123456"
+          },
+          "documentSeries": {
+            "type": "string",
+            "description": "Серія документа (якщо застосовується)",
+            "example": "АБ"
           },
           "iban": {
             "type": "string",
@@ -1757,5 +1947,44 @@
         }
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "statement-operations",
+      "x-displayName": "Виписка рахунку"
+    },
+    {
+      "name": "payment-operations",
+      "x-displayName": "Операції з платежами"
+    },
+    {
+      "name": "account-details",
+      "x-displayName": "Деталі рахунку"
+    },
+    {
+      "name": "salary-contacts",
+      "x-displayName": "Зарплатні контакти"
+    },
+    {
+      "name": "salary-registry",
+      "x-displayName": "Виплата зарплатні"
+    }
+  ],
+  "x-tagGroups": [
+    {
+      "name": "Основні операції",
+      "tags": [
+        "statement-operations",
+        "payment-operations",
+        "account-details"
+      ]
+    },
+    {
+      "name": "Зарплата",
+      "tags": [
+        "salary-contacts",
+        "salary-registry"
+      ]
+    }
+  ]
 }
