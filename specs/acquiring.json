@@ -132,7 +132,7 @@
     "/api/merchant/invoice/status?invoiceId={invoiceId}": {
       "get": {
         "summary": "Статус рахунку",
-        "description": "Метод перевірки статусу рахунку при розсинхронізації з боку продавця або відсутності webHookUrl при створенні рахунку.",
+        "description": "Метод перевірки статусу рахунку при розсинхронізації з боку продавця.\n\nНе використовуйте сервіс як основний механізм перевірки статусу по інвойсу після здійснення операції. Для отримання інформації про зміну статусу інвойса, краще використовувати Webhooks.",
         "parameters": [
           {
             "name": "X-Token",
@@ -2419,7 +2419,7 @@
         }
       }
     },
-    "/api/merchant/subscriptions/list": {
+    "/api/merchant/subscription/list": {
       "get": {
         "summary": "Перегляд регулярних платежів у клієнта",
         "description": "Метод для отримання списку регулярних платежів",
@@ -2744,6 +2744,273 @@
           }
         }
       }
+    },
+    "/api/merchant/monopay/pubkey-import": {
+      "post": {
+        "summary": "Імпорт ключа для підпису запитів кнопки monopay",
+        "description": "Сервіс для імпорту ключа торговця для взаємодії з віджетом кнопки monopay",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен можна отримати через підтримку або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonoPayKeyImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ключ успішно імпортовано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyImportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyBadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyInternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/monopay/pubkey-delete": {
+      "post": {
+        "summary": "Видалення ключа для підпису",
+        "description": "Сервіс для видалення ключа підпису для взаємодії з віджетом кнопки monopay",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен можна отримати через підтримку або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonoPayKeyDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ключ успішно видалено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyBadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ключ не знайдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyInternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/monopay/pubkey-list": {
+      "get": {
+        "summary": "Отримання списку ключів для підпису",
+        "description": "Сервіс для отримання ключів для підпису для взаємодії з віджетом кнопки monopay",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен можна отримати через підтримку або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список ключів успішно отримано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyBadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonoPayKeyInternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2975,6 +3242,15 @@
                 }
               }
             }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Додаткові дані замовлення, які були вказані при створенні інвойсу",
+            "maxItems": 10,
+            "example": {
+              "key1": "value1",
+              "key2": "value2"
+            }
           }
         }
       },
@@ -3016,14 +3292,14 @@
           },
           "webHookUrl": {
             "type": "string",
-            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту “Статус рахунку”. **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**.\n\nОкрім вебхуків при зміні статусу рахунку, вебхуки також будуть приходити при зміні статусу токенізоваї картки, якщо обʼєкт `saveCardData` було вказано при створенні рахунку",
+            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту \"Статус рахунку\". **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**.\n\nОкрім вебхуків при зміні статусу рахунку, вебхуки також будуть приходити при зміні статусу токенізоваї картки, якщо обʼєкт `saveCardData` було вказано при створенні рахунку",
             "example": "https://example.com/mono/acquiring/webhook/maybesomegibberishuniquestringbutnotnecessarily"
           },
           "validity": {
             "type": "integer",
             "format": "int64",
             "example": 3600,
-            "description": "Строк дії в секундах, за замовчуванням рахунок перестає бути дійсним через 24 години"
+            "description": "Строк дії в секундах, за замовчуванням рахунок перестає бути дійсним через 24 години. Максимальний термін життя інвойса який можна задати - 30 днів. Якщо передати більше 30 днів, то автоматично обрізається до 30 днів"
           },
           "paymentType": {
             "type": "string",
@@ -3144,8 +3420,21 @@
                   "description": "Значення, яке буде фігурувати в розрахунках",
                   "minimum": 0.01,
                   "multipleOf": 0.01
+                },
+                "tax": {
+                  "type": "array",
+                  "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: необов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n"
                 }
               }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Додаткові дані замовлення, які будуть доступні в ендпоінті виписки",
+            "maxItems": 10,
+            "example": {
+              "key1": "value1",
+              "key2": "value2"
             }
           },
           "basketOrder": {
@@ -3212,7 +3501,7 @@
                 },
                 "tax": {
                   "type": "array",
-                  "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: не обов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n",
+                  "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: необов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n",
                   "items": {
                     "type": "integer"
                   },
@@ -3260,6 +3549,10 @@
                         "description": "Значення, яке буде фігурувати в розрахунках",
                         "minimum": 0.01,
                         "multipleOf": 0.01
+                      },
+                      "tax": {
+                        "type": "array",
+                        "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: необов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n"
                       }
                     }
                   }
@@ -3338,7 +3631,7 @@
           },
           "webHookUrl": {
             "type": "string",
-            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту “Статус рахунку”. **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**",
+            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту \"Статус рахунку\". **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**",
             "example": "https://example.com/mono/acquiring/webhook/maybesomegibberishuniquestringbutnotnecessarily"
           },
           "paymentType": {
@@ -4019,7 +4312,7 @@
           },
           "webHookUrl": {
             "type": "string",
-            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту “Статус рахунку”. **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**",
+            "description": "Адреса для CallBack (POST) – на цю адресу буде надіслано дані про стан платежу при зміні статусу, окрім статусу `expired`. Зміст тіла запиту ідентичний відповіді запиту \"Статус рахунку\". **Гарантії доставки повідомлень одне за одним не надається. Тобто, може бути ситуація, коли вебхук про успішну оплату (`status=success`) прийде раніше за вебхук про обробку цієї оплати (`status=processing`). Краще орієнтуватись на поле `modifiedDate` при аналізі поточного статусу рахунку. Вебхук із більшим `modifiedDate` буде актуальним**",
             "example": "https://example.com/mono/acquiring/webhook/maybesomegibberishuniquestringbutnotnecessarily"
           },
           "initiationKind": {
@@ -4497,7 +4790,7 @@
           },
           "tax": {
             "type": "array",
-            "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: не обов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n",
+            "description": "Масив податкових ставок, які використовуються при фіскалізації.\n\n• Для Checkbox: необов'язкова передача даних у цьому полі\n\n• Для Вчасно.Каса: обов'язкова передача даних у цьому полі\n\nПри використанні пРРО \"API для податкової\" податкові ставки наразі не застосовуються\n",
             "items": {
               "type": "integer"
             }
@@ -4639,7 +4932,7 @@
             "type": "integer",
             "format": "int64",
             "example": 3600,
-            "description": "Строк дії в секундах, за замовчуванням рахунок перестає бути дійсним через 24 години"
+            "description": "Строк дії в секундах, за замовчуванням рахунок перестає бути дійсним через 24 години. Максимальний термін життя інвойса який можна задати - 30 днів. Якщо передати більше 30 днів, то автоматично обрізається до 30 днів"
           }
         }
       },
@@ -5009,6 +5302,130 @@
                 "description": "Загальна кількість сторінок"
               }
             }
+          }
+        }
+      },
+      "MonoPayKeyImportRequest": {
+        "type": "object",
+        "required": [
+          "keyValue"
+        ],
+        "properties": {
+          "keyValue": {
+            "type": "string",
+            "description": "Значення ключа (Base64)",
+            "example": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFakdQUmJiTmt1L2tXZElWMFFheFlib1dtWGZINQpPS05BdU4yTDUxQVlUeU9QV2JwOEZHWndhNFFQUjFYaStROVZrMDRNaFhxbVJyZzkycDNMbVpJU1lnPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg=="
+          },
+          "keyName": {
+            "type": "string",
+            "description": "Назва ключа (клієнтська назва)",
+            "example": "my_key"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата та час, коли термін дії ключа закінчується",
+            "example": "2026-02-02T15:04:05+03:00"
+          }
+        }
+      },
+      "MonoPayKeyImportResponse": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object",
+            "properties": {
+              "keyId": {
+                "type": "string",
+                "description": "Ключ для підпису запиту на віджет",
+                "example": "28F91hHGtzoSFJ"
+              }
+            }
+          }
+        }
+      },
+      "MonoPayKeyDeleteRequest": {
+        "type": "object",
+        "required": [
+          "keyId"
+        ],
+        "properties": {
+          "keyId": {
+            "type": "string",
+            "description": "Ключ для підпису запиту на віджет",
+            "example": "28F91hHGtzoSFJ"
+          }
+        }
+      },
+      "MonoPayKeyListResponse": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "keyId": {
+                  "type": "string",
+                  "description": "Ідентифікатор ключа",
+                  "example": "28F91hHGtzoSFJ"
+                },
+                "keyValue": {
+                  "type": "string",
+                  "description": "Значення ключа",
+                  "example": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0K..."
+                },
+                "keyName": {
+                  "type": "string",
+                  "description": "Назва ключа (клієнтська назва)",
+                  "example": "my_key"
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Дата та час, коли термін дії ключа закінчується",
+                  "example": "2026-02-02T15:04:05+03:00"
+                }
+              }
+            }
+          }
+        }
+      },
+      "MonoPayKeyBadRequestError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "BAD_REQUEST",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `BAD_REQUEST` - запит некоректний, потрібно виправити параметри запиту та спробувати ще раз;\n\n  `1001` - запит некоректний, потрібно виправити параметри запиту та спробувати ще раз;\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "empty 'keyValue'",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      },
+      "MonoPayKeyInternalServerError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "INTERNAL_ERROR",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `INTERNAL_ERROR` - обробка запиту завершилася непередбаченою помилкою;\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "internal server error",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
           }
         }
       },
