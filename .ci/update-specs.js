@@ -4,17 +4,19 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
 const vm = require('node:vm');
 
 const API_DOCS_URL = 'https://monobank.ua/api-docs';
-const OASDIFF_TENANT_ID = 'b4153952-9781-4596-8bf9-fd286d626506';
 const SCRIPT_DIR = __dirname;
 const REPO_ROOT_DIR = path.resolve(SCRIPT_DIR, '..');
 const CACHE_ROOT_DIR = path.join(SCRIPT_DIR, '.cache');
 const CACHE_RAW_DIR = path.join(CACHE_ROOT_DIR, 'raw');
 const RESULT_SPECS_DIR = path.join(SCRIPT_DIR, '.result');
-const OASDIFF_TIMEOUT_MS = 30000;
-const OASDIFF_MAX_RETRIES = 2;
+const OASDIFF_DOCKER_IMAGE = process.env.OASDIFF_DOCKER_IMAGE || 'tufin/oasdiff:latest';
+const OASDIFF_DOCKER_TIMEOUT_MS = Number(process.env.OASDIFF_DOCKER_TIMEOUT_MS) || 60000;
+const execFileAsync = promisify(execFile);
 
 async function fetchText(url) {
   const response = await fetch(url, {
@@ -262,67 +264,57 @@ function sanitizeSpecForPersist(spec) {
   return clonedSpec;
 }
 
-function formatHeadersForError(headers) {
-  const pairs = [];
-  for (const [name, value] of headers.entries()) {
-    pairs.push(`${name}: ${value}`);
-  }
-  return pairs.length === 0 ? 'none' : pairs.join('; ');
-}
-
 async function generateHumanReadableDiff(oldSpec, newSpec, fileName) {
-  const endpoint = `https://api.oasdiff.com/tenants/${OASDIFF_TENANT_ID}/diff`;
-  const baseJson = `${JSON.stringify(oldSpec, null, 2)}\n`;
-  const revisionJson = `${JSON.stringify(newSpec, null, 2)}\n`;
-  const form = new FormData();
-  form.append('base', new Blob([baseJson], { type: 'application/json' }), `${fileName}.old.json`);
-  form.append(
-    'revision',
-    new Blob([revisionJson], { type: 'application/json' }),
-    `${fileName}.new.json`
-  );
+  const safeName = fileName.replace(/[^a-zA-Z0-9_.-]/g, '_');
+  const inputDir = path.join(CACHE_ROOT_DIR, 'oasdiff', safeName);
+  const baseFile = path.join(inputDir, 'base.json');
+  const revisionFile = path.join(inputDir, 'revision.json');
 
-  let lastError = null;
-  for (let attempt = 1; attempt <= OASDIFF_MAX_RETRIES; attempt += 1) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), OASDIFF_TIMEOUT_MS);
+  await fs.mkdir(inputDir, { recursive: true });
+  await fs.writeFile(baseFile, `${JSON.stringify(oldSpec, null, 2)}\n`, 'utf8');
+  await fs.writeFile(revisionFile, `${JSON.stringify(newSpec, null, 2)}\n`, 'utf8');
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: form,
-        signal: controller.signal,
-        headers: {
-          'user-agent': 'monobank-api-community-docs-spec-toolkit',
-          accept: 'text/markdown',
-        },
-      });
-      const body = await response.text();
+  const dockerArgs = [
+    'run',
+    '--rm',
+    '--network',
+    'none',
+    '-v',
+    `${inputDir}:/work`,
+    OASDIFF_DOCKER_IMAGE,
+    'changelog',
+    '/work/base.json',
+    '/work/revision.json',
+    '--format',
+    'markdown',
+  ];
 
-      if (!response.ok) {
-        const responseHeaders = formatHeadersForError(response.headers);
-        const bodySnippet = body.slice(0, 600);
-        const error = new Error(
-          `oasdiff diff request failed for ${fileName}. HTTP ${response.status}. Body: ${bodySnippet}`
-        );
-        error.fileReason =
-          `oasdiff diff request failed for ${fileName}. HTTP ${response.status}. ` +
-          `Headers: ${responseHeaders}. Body: ${bodySnippet}`;
-        throw error;
-      }
-
-      return body.endsWith('\n') ? body : `${body}\n`;
-    } catch (error) {
-      lastError = error;
-      if (attempt < OASDIFF_MAX_RETRIES) {
-        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
-      }
-    } finally {
-      clearTimeout(timeoutId);
-    }
+  try {
+    const { stdout } = await execFileAsync('docker', dockerArgs, {
+      timeout: OASDIFF_DOCKER_TIMEOUT_MS,
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    const normalizedOutput = (stdout || '').trim();
+    return normalizedOutput ? `${normalizedOutput}\n` : 'No changelog changes\n';
+  } catch (error) {
+    const stderr = error && typeof error === 'object' && 'stderr' in error ? String(error.stderr) : '';
+    const stdout = error && typeof error === 'object' && 'stdout' in error ? String(error.stdout) : '';
+    const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unknown';
+    const signal =
+      error && typeof error === 'object' && 'signal' in error && error.signal
+        ? String(error.signal)
+        : 'none';
+    const stderrSnippet = stderr.trim().slice(0, 1000) || '(empty)';
+    const stdoutSnippet = stdout.trim().slice(0, 1000) || '(empty)';
+    const dockerCmd = `docker ${dockerArgs.join(' ')}`;
+    const dockerError = new Error(
+      `oasdiff docker changelog failed for ${fileName}. exit=${code}, signal=${signal}. stderr: ${stderrSnippet}`
+    );
+    dockerError.fileReason =
+      `oasdiff docker changelog failed for ${fileName}. exit=${code}, signal=${signal}. ` +
+      `command: ${dockerCmd}. stderr: ${stderrSnippet}. stdout: ${stdoutSnippet}`;
+    throw dockerError;
   }
-
-  throw lastError || new Error(`oasdiff diff request failed for ${fileName}`);
 }
 
 function buildFallbackChangelog(fileName, oldSpec, newSpec, reason) {
