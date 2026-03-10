@@ -356,7 +356,9 @@ async function writeMatchedSpec(target, discoveredSpec) {
   const sanitizedSpec = sanitizeSpecForPersist(discoveredSpec);
   const changelog = await generateChangelogForSpec(target, oldSpec, sanitizedSpec);
 
+  const oldSpecJson = `${JSON.stringify(oldSpec, null, 2)}\n`;
   const specJson = `${JSON.stringify(sanitizedSpec, null, 2)}\n`;
+  const changed = oldSpecJson !== specJson;
   await fs.writeFile(target.tmpResultPath, specJson, 'utf8');
   await fs.writeFile(
     target.diffResultPath,
@@ -364,7 +366,11 @@ async function writeMatchedSpec(target, discoveredSpec) {
     'utf8'
   );
   await fs.writeFile(target.targetPath, specJson, 'utf8');
-  return `${target.fileName} <= "${discoveredSpec?.info?.title || 'Untitled'}"`;
+  return {
+    fileName: target.fileName,
+    title: discoveredSpec?.info?.title || 'Untitled',
+    changed,
+  };
 }
 
 async function main() {
@@ -396,14 +402,25 @@ async function main() {
   await ensureOutputDirs();
   await writeRawCacheFiles(mainScriptUrl, mainScriptSourceCode, openApiScriptUrl, openApiSourceCode);
 
-  const updatedFiles = [];
+  const targetResults = [];
   for (const [expectedIndex, target] of expectedTargets.entries()) {
     const match = matches.get(expectedIndex);
     if (!match) {
       continue;
     }
-    updatedFiles.push(await writeMatchedSpec(target, match.discoveredSpec));
+    targetResults.push(await writeMatchedSpec(target, match.discoveredSpec));
   }
+
+  const changedTargets = targetResults.filter((item) => item.changed);
+  const unchangedTargets = targetResults.filter((item) => !item.changed);
+  const changedTargetsOutput =
+    changedTargets.length === 0
+      ? '- none'
+      : changedTargets.map((item) => `- ${item.fileName} <= "${item.title}"`).join('\n');
+  const unchangedTargetsOutput =
+    unchangedTargets.length === 0
+      ? '- none'
+      : unchangedTargets.map((item) => `- ${item.fileName} <= "${item.title}"`).join('\n');
 
   const unmatchedExpectedOutput =
     unmatchedExpected.length === 0
@@ -430,8 +447,11 @@ Docs: ${API_DOCS_URL}
 Main script: ${mainScriptUrl}
 OpenAPI script: ${openApiScriptUrl}
 
-Targets:
-${updatedFiles.length === 0 ? '- none' : `- ${updatedFiles.join('\n- ')}`}
+Changed targets:
+${changedTargetsOutput}
+
+Unchanged targets:
+${unchangedTargetsOutput}
 
 Unmatched expected titles:
 ${unmatchedExpectedOutput}
