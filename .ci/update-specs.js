@@ -13,6 +13,8 @@ const REPO_ROOT_DIR = path.resolve(SCRIPT_DIR, '..');
 const CACHE_ROOT_DIR = path.join(SCRIPT_DIR, '.cache');
 const CACHE_RAW_DIR = path.join(CACHE_ROOT_DIR, 'raw');
 const RESULT_SPECS_DIR = path.join(SCRIPT_DIR, '.result');
+const OASDIFF_TIMEOUT_MS = 30000;
+const OASDIFF_MAX_RETRIES = 2;
 
 async function fetchText(url) {
   const response = await fetch(url, {
@@ -260,6 +262,14 @@ function sanitizeSpecForPersist(spec) {
   return clonedSpec;
 }
 
+function formatHeadersForError(headers) {
+  const pairs = [];
+  for (const [name, value] of headers.entries()) {
+    pairs.push(`${name}: ${value}`);
+  }
+  return pairs.length === 0 ? 'none' : pairs.join('; ');
+}
+
 async function generateHumanReadableDiff(oldSpec, newSpec, fileName) {
   const endpoint = `https://api.oasdiff.com/tenants/${OASDIFF_TENANT_ID}/diff`;
   const baseJson = `${JSON.stringify(oldSpec, null, 2)}\n`;
@@ -272,32 +282,95 @@ async function generateHumanReadableDiff(oldSpec, newSpec, fileName) {
     `${fileName}.new.json`
   );
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    body: form,
-    headers: {
-      'user-agent': 'monobank-api-community-docs-spec-toolkit',
-      accept: 'text/markdown',
-    },
-  });
-  const body = await response.text();
+  let lastError = null;
+  for (let attempt = 1; attempt <= OASDIFF_MAX_RETRIES; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), OASDIFF_TIMEOUT_MS);
 
-  if (!response.ok) {
-    throw new Error(
-      `oasdiff diff request failed for ${fileName}. HTTP ${response.status}. Body: ${body.slice(0, 600)}`
-    );
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: form,
+        signal: controller.signal,
+        headers: {
+          'user-agent': 'monobank-api-community-docs-spec-toolkit',
+          accept: 'text/markdown',
+        },
+      });
+      const body = await response.text();
+
+      if (!response.ok) {
+        const responseHeaders = formatHeadersForError(response.headers);
+        const bodySnippet = body.slice(0, 600);
+        const error = new Error(
+          `oasdiff diff request failed for ${fileName}. HTTP ${response.status}. Body: ${bodySnippet}`
+        );
+        error.fileReason =
+          `oasdiff diff request failed for ${fileName}. HTTP ${response.status}. ` +
+          `Headers: ${responseHeaders}. Body: ${bodySnippet}`;
+        throw error;
+      }
+
+      return body.endsWith('\n') ? body : `${body}\n`;
+    } catch (error) {
+      lastError = error;
+      if (attempt < OASDIFF_MAX_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
-  return body.endsWith('\n') ? body : `${body}\n`;
+  throw lastError || new Error(`oasdiff diff request failed for ${fileName}`);
+}
+
+function buildFallbackChangelog(fileName, oldSpec, newSpec, reason) {
+  const oldVersion = oldSpec?.info?.version || 'unknown';
+  const newVersion = newSpec?.info?.version || 'unknown';
+  const oldPathCount = oldSpec?.paths ? Object.keys(oldSpec.paths).length : 0;
+  const newPathCount = newSpec?.paths ? Object.keys(newSpec.paths).length : 0;
+
+  return (
+    `# Changelog unavailable\n\n` +
+    `Could not generate human-readable diff for \`${fileName}\` via oasdiff.\n\n` +
+    `Reason: ${reason}\n\n` +
+    `## Quick summary\n\n` +
+    `- Previous version: \`${oldVersion}\`\n` +
+    `- New version: \`${newVersion}\`\n` +
+    `- Previous path count: \`${oldPathCount}\`\n` +
+    `- New path count: \`${newPathCount}\`\n`
+  );
+}
+
+async function generateChangelogForSpec(target, oldSpec, sanitizedSpec) {
+  try {
+    return await generateHumanReadableDiff(oldSpec, sanitizedSpec, target.fileName);
+  } catch (error) {
+    const reasonForStderr = error instanceof Error ? error.message : String(error);
+    const reasonForFile =
+      error && typeof error === 'object' && 'fileReason' in error
+        ? String(error.fileReason)
+        : reasonForStderr;
+    process.stderr.write(
+      `Warning: failed to generate changelog for ${target.fileName}. Using fallback summary. ${reasonForStderr}\n`
+    );
+    return buildFallbackChangelog(target.fileName, oldSpec, sanitizedSpec, reasonForFile);
+  }
 }
 
 async function writeMatchedSpec(target, discoveredSpec) {
   const oldSpec = target.currentSpec;
   const sanitizedSpec = sanitizeSpecForPersist(discoveredSpec);
-  const changelog = await generateHumanReadableDiff(oldSpec, sanitizedSpec, target.fileName);
+  const changelog = await generateChangelogForSpec(target, oldSpec, sanitizedSpec);
+
   const specJson = `${JSON.stringify(sanitizedSpec, null, 2)}\n`;
   await fs.writeFile(target.tmpResultPath, specJson, 'utf8');
-  await fs.writeFile(target.diffResultPath, changelog, 'utf8');
+  await fs.writeFile(
+    target.diffResultPath,
+    changelog.endsWith('\n') ? changelog : `${changelog}\n`,
+    'utf8'
+  );
   await fs.writeFile(target.targetPath, specJson, 'utf8');
   return `${target.fileName} <= "${discoveredSpec?.info?.title || 'Untitled'}"`;
 }
