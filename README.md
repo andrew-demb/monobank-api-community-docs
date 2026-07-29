@@ -236,9 +236,7 @@ OpenAPI specification не може бути представленим, оск�
 
 Посилання на документацію API: https://corp-api.monobank.ua
 
-> Див. також [legal_entity.json](specs/legal_entity.json)
->
-> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/legal_entity.json
+OpenAPI specification є доступним до скачування з UI сторінки і не відстежується у поточному репозиторії.
 
 ### 5. Open Banking
 
