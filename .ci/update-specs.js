@@ -6,9 +6,14 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const vm = require('node:vm');
+const {
+  API_DOCS_URL,
+  OPENAPI_SPECS_URL,
+  PERSONAL_API_DOCS_URL,
+  fetchPublishedSpecs,
+} = require('./openapi-sources');
+const { matchDiscoveredSpecs, sanitizeSpecForPersist } = require('./openapi-specs');
 
-const API_DOCS_URL = 'https://monobank.ua/api-docs';
 const SCRIPT_DIR = __dirname;
 const REPO_ROOT_DIR = path.resolve(SCRIPT_DIR, '..');
 const CACHE_ROOT_DIR = path.join(SCRIPT_DIR, '.cache');
@@ -17,120 +22,6 @@ const RESULT_SPECS_DIR = path.join(SCRIPT_DIR, '.result');
 const OASDIFF_DOCKER_IMAGE = process.env.OASDIFF_DOCKER_IMAGE || 'tufin/oasdiff:latest';
 const OASDIFF_DOCKER_TIMEOUT_MS = Number(process.env.OASDIFF_DOCKER_TIMEOUT_MS) || 60000;
 const execFileAsync = promisify(execFile);
-
-async function fetchText(url) {
-  const response = await fetch(url, {
-    headers: {
-      'user-agent': 'monobank-api-community-docs-spec-toolkit',
-    },
-    redirect: 'follow',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}. HTTP status: ${response.status}`);
-  }
-
-  const body = await response.text();
-  if (!body.trim()) {
-    throw new Error(`Fetched empty response body from ${url}`);
-  }
-
-  return body;
-}
-
-function discoverMainScriptPath(html) {
-  // Extract only the <head> block to avoid matching unrelated scripts in body content.
-  // Regex details:
-  // - <head[^>]*> : opening <head> tag with optional attributes
-  // - ([\s\S]*?)  : non-greedy capture of any chars/newlines inside <head>
-  // - </head>     : closing tag
-  // - /i          : case-insensitive HTML tag matching
-  const head = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1] || html;
-
-  // Find the Vite main bundle path for docs UI.
-  // Regex details:
-  // - /assets/main- : required prefix
-  // - [^"'`\s>]+    : hash/filename chars until quote, whitespace, backtick or '>'
-  // - \.js\b        : ".js" extension with word boundary
-  const mainScriptPath = head.match(/\/assets\/main-[^"'`\s>]+\.js\b/)?.[0];
-
-  if (!mainScriptPath) {
-    throw new Error('Could not find main script path in API docs HTML');
-  }
-
-  return mainScriptPath;
-}
-
-function discoverOpenApiScriptPath(mainScriptSourceCode) {
-  // Find openapi data bundle reference inside main script.
-  // Regex details:
-  // - (?:\/)?                 : optional leading slash
-  // - assets/openapi-data-    : required prefix
-  // - [^"'`\s)]+              : filename chars until quote, whitespace, backtick or ')'
-  // - \.js\b                  : ".js" extension with word boundary
-  const openApiScriptPath =
-    mainScriptSourceCode.match(/(?:\/)?assets\/openapi-data-[^"'`\s)]+\.js\b/)?.[0];
-
-  if (!openApiScriptPath) {
-    throw new Error('Could not find openapi-data script path in main script');
-  }
-
-  return openApiScriptPath.startsWith('/') ? openApiScriptPath : `/${openApiScriptPath}`;
-}
-
-function extractOpenApiFromJs(sourceCode) {
-  const sanitizedSource = sourceCode
-    // Remove ESM named export tail, e.g.:
-    // export { a as x, b as y };
-    // Regex details:
-    // - \bexport\s*\{   : "export" followed by "{"
-    // - [\s\S]*?        : non-greedy anything inside export list
-    // - \}\s*;?\s*$     : closing "}", optional semicolon, trailing whitespace to end
-    // - /m              : multiline mode so $ works at final line boundary
-    .replace(/\bexport\s*\{[\s\S]*?\}\s*;?\s*$/m, '')
-    // Remove `export default` token if present so VM can execute as plain script.
-    // Regex details:
-    // - \bexport\s+default\s+ : exact keyword sequence with flexible whitespace
-    // - /g                    : replace all occurrences
-    .replace(/\bexport\s+default\s+/g, '');
-
-  const context = Object.create(null);
-  vm.createContext(context);
-  vm.runInContext(sanitizedSource, context, {
-    timeout: 10000,
-    displayErrors: true,
-  });
-
-  const contextValues = [];
-  for (const key of Reflect.ownKeys(context)) {
-    contextValues.push(context[key]);
-  }
-
-  const specs = [];
-  const seen = new Set();
-  for (const value of contextValues) {
-    if (
-      value &&
-      typeof value === 'object' &&
-      typeof value.openapi === 'string' &&
-      value.paths &&
-      typeof value.paths === 'object' &&
-      value.components &&
-      typeof value.components === 'object'
-    ) {
-      if (!seen.has(value)) {
-        seen.add(value);
-        specs.push(value);
-      }
-    }
-  }
-
-  if (specs.length === 0) {
-    throw new Error('Could not find OpenAPI object in evaluated JS payload');
-  }
-
-  return specs;
-}
 
 async function readExpectedSpecTargets() {
   const specsDir = path.join(REPO_ROOT_DIR, 'specs');
@@ -156,78 +47,6 @@ async function readExpectedSpecTargets() {
   return targets;
 }
 
-function normalizeTitle(title) {
-  return String(title || '').trim().toLowerCase();
-}
-
-function matchDiscoveredSpecs(expectedTargets, discoveredSpecs) {
-  const matches = new Map();
-  const unmatchedExpected = [];
-  const expectedTitleKeys = new Set(
-    expectedTargets.map((target) => normalizeTitle(target.currentSpec?.info?.title))
-  );
-  const usedDiscoveredByTitle = new Map();
-
-  const discoveredByTitle = new Map();
-  for (const discoveredSpec of discoveredSpecs) {
-    const titleKey = normalizeTitle(discoveredSpec?.info?.title);
-    if (!discoveredByTitle.has(titleKey)) {
-      discoveredByTitle.set(titleKey, []);
-    }
-    discoveredByTitle.get(titleKey).push(discoveredSpec);
-  }
-
-  for (const [expectedIndex, expected] of expectedTargets.entries()) {
-    const expectedTitleKey = normalizeTitle(expected.currentSpec?.info?.title);
-    const candidates = discoveredByTitle.get(expectedTitleKey);
-
-    if (!candidates || candidates.length === 0) {
-      unmatchedExpected.push({
-        fileName: expected.fileName,
-        title: expected.currentSpec?.info?.title || 'Untitled',
-      });
-      continue;
-    }
-
-    const selectedSpec = candidates.shift();
-    matches.set(expectedIndex, { discoveredSpec: selectedSpec });
-
-    if (!usedDiscoveredByTitle.has(expectedTitleKey)) {
-      usedDiscoveredByTitle.set(expectedTitleKey, []);
-    }
-    usedDiscoveredByTitle.get(expectedTitleKey).push(selectedSpec);
-  }
-
-  const duplicatedDiscovered = [];
-  for (const [titleKey, specsWithSameTitle] of discoveredByTitle.entries()) {
-    const matchedTitle = expectedTitleKeys.has(titleKey);
-    const usedSpecs = usedDiscoveredByTitle.get(titleKey) || [];
-    const consumedCount = usedSpecs.length;
-    const totalCount = specsWithSameTitle.length + consumedCount;
-
-    if (totalCount > 1) {
-      const title = specsWithSameTitle[0]?.info?.title || 'Untitled';
-      const allSpecs = [...usedSpecs, ...specsWithSameTitle];
-      const versions = allSpecs.map((spec) => spec?.info?.version || 'unknown');
-      const usedVersions = usedSpecs.map((spec) => spec?.info?.version || 'unknown');
-      duplicatedDiscovered.push({ title, count: totalCount, versions, usedVersions });
-    }
-  }
-
-  const unmatchedDiscovered = [];
-  for (const [titleKey, specsWithSameTitle] of discoveredByTitle.entries()) {
-    if (expectedTitleKeys.has(titleKey)) {
-      continue;
-    }
-
-    for (const spec of specsWithSameTitle) {
-      unmatchedDiscovered.push(spec?.info?.title || 'Untitled');
-    }
-  }
-
-  return { matches, unmatchedExpected, unmatchedDiscovered, duplicatedDiscovered };
-}
-
 async function clearRunDirectories() {
   await Promise.all([
     fs.rm(CACHE_ROOT_DIR, { recursive: true, force: true }),
@@ -242,26 +61,20 @@ async function ensureOutputDirs() {
   ]);
 }
 
-async function writeRawCacheFiles(mainScriptUrl, mainScriptSourceCode, openApiScriptUrl, openApiSourceCode) {
-  const mainRawPath = path.join(CACHE_RAW_DIR, path.basename(new URL(mainScriptUrl).pathname));
-  const openApiRawPath = path.join(CACHE_RAW_DIR, path.basename(new URL(openApiScriptUrl).pathname));
-
-  await fs.writeFile(mainRawPath, mainScriptSourceCode, 'utf8');
-  await fs.writeFile(openApiRawPath, openApiSourceCode, 'utf8');
-}
-
-function sanitizeSpecForPersist(spec) {
-  const clonedSpec = JSON.parse(JSON.stringify(spec));
-  const description = clonedSpec?.info?.description;
-
-  if (typeof description === 'string') {
-    clonedSpec.info.description = description.replace(
-      /https:\/\/t\.me\/joinchat\/[^\s)"'`]+/g,
-      'REDACTED_TGLINK'
-    );
-  }
-
-  return clonedSpec;
+async function writeRawCacheFiles(publishedSpecs) {
+  await Promise.all([
+    fs.writeFile(
+      path.join(CACHE_RAW_DIR, 'openapi-specs.json'),
+      `${JSON.stringify(publishedSpecs.dynamicResponse, null, 2)}\n`,
+      'utf8'
+    ),
+    fs.writeFile(
+      path.join(CACHE_RAW_DIR, path.basename(new URL(publishedSpecs.legacySourceUrl).pathname)),
+      publishedSpecs.legacySourceCode,
+      'utf8'
+    ),
+    fs.writeFile(path.join(CACHE_RAW_DIR, 'personal-api-docs.html'), publishedSpecs.personalDocsHtml, 'utf8'),
+  ]);
 }
 
 async function generateHumanReadableDiff(oldSpec, newSpec, fileName) {
@@ -376,31 +189,16 @@ async function writeMatchedSpec(target, discoveredSpec) {
 async function main() {
   await clearRunDirectories();
 
-  // fetch doc landing page - search main JS entrypoint URL
-  const docsHtml = await fetchText(API_DOCS_URL);
-  const mainScriptPath = discoverMainScriptPath(docsHtml);
-  const mainScriptUrl = new URL(mainScriptPath, API_DOCS_URL).toString();
-
-  // fetch main JS entrypoint - search OpenAPI JS entrypoint URL
-  const mainScriptSourceCode = await fetchText(mainScriptUrl);
-  const openApiScriptPath = discoverOpenApiScriptPath(mainScriptSourceCode);
-  const openApiScriptUrl = new URL(openApiScriptPath, API_DOCS_URL).toString();
-
-  // fetch OpenAPI JS entrypoint - extract OpenAPI specs
-  const openApiSourceCode = await fetchText(openApiScriptUrl);
-  const discoveredSpecs = extractOpenApiFromJs(openApiSourceCode);
+  const publishedSpecs = await fetchPublishedSpecs();
 
   // search for expected specs in the project
   const expectedTargets = await readExpectedSpecTargets();
   // match discovered specs to expected specs
   const { matches, unmatchedExpected, unmatchedDiscovered, duplicatedDiscovered } =
-    matchDiscoveredSpecs(
-    expectedTargets,
-    discoveredSpecs
-    );
+    matchDiscoveredSpecs(expectedTargets, publishedSpecs.specs);
 
   await ensureOutputDirs();
-  await writeRawCacheFiles(mainScriptUrl, mainScriptSourceCode, openApiScriptUrl, openApiSourceCode);
+  await writeRawCacheFiles(publishedSpecs);
 
   const targetResults = [];
   for (const [expectedIndex, target] of expectedTargets.entries()) {
@@ -444,8 +242,9 @@ async function main() {
     `Specs updated.
 
 Docs: ${API_DOCS_URL}
-Main script: ${mainScriptUrl}
-OpenAPI script: ${openApiScriptUrl}
+Dynamic OpenAPI source: ${OPENAPI_SPECS_URL}
+Legacy OpenAPI source: ${publishedSpecs.legacySourceUrl}
+Personal OpenAPI source: ${PERSONAL_API_DOCS_URL}
 
 Changed targets:
 ${changedTargetsOutput}
