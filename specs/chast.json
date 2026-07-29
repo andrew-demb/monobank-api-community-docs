@@ -2,12 +2,12 @@
   "openapi": "3.0.1",
   "info": {
     "title": "Покупка Частинами",
-    "description": "# Покупка Частинами\r\n\r\n## Огляд\r\n\r\nAPI Покупки Частинами Монобанку дозволяє магазинам пропонувати клієнтам оплату товарів та послуг у ПЧ.\r\nЦей сервіс надає клієнтам можливість розділити покупку на кілька платежів без відсотків, роблячи товари доступнішими, а\r\nмагазини отримують оплату миттєво.\r\n\r\n### Ключові можливості\r\n\r\n- Миттєве схвалення - кредитне рішення за 20 секунд\r\n- Без відсотків для клієнтів (комісію сплачує магазин)\r\n- Гнучка Покупка Частинами - від 3 до 25 платежів\r\n- Сповіщення в реальному часі через callback або polling\r\n- Детальна звітність та аналітика\r\n- Ідемпотентні операції для запобігання дублювання замовлень\r\n\r\n---\r\n\r\n## Схема інтеграції\r\n\r\nТипова інтеграція відбувається за наступною схемою:\r\n\r\n1. Клієнт обирає товари та вибирає оплату через Покупку Частинами\r\n2. Магазин створює замовлення через `/api/order/create`\r\n3. Клієнт отримує push-сповіщення в застосунку Монобанку\r\n4. Клієнт підтверджує договір ПЧ\r\n5. Магазин отримує callback зі статусом `WAITING_FOR_STORE_CONFIRM`\r\n6. Магазин видає товар та викликає `/api/order/confirm`\r\n7. Покупка Частинами стає активною і з клієнта списується перший платіж\r\n\r\n### Діаграма процесу\r\n\r\n<details>\r\n  <summary>Відкрити Mermaid діаграму</summary>\r\n\r\n  ```mermaid\r\n  sequenceDiagram\r\n      actor Client as Клієнт\r\n      participant Store as Магазин Backend\r\n      participant Mono as Monobank Backend\r\n      participant App as Мобільний застосунок\r\n      autonumber\r\n  \r\n      Client->>Store: Оформлює замовлення\r\n      Store->>Mono: POST /api/order/create<br>(опційно: result_callback)\r\n      Mono->>App: Push на підтвердження\r\n      Client->>App: Підтверджує ПЧ\r\n      App->>Mono: Approve\r\n      note over Mono: Статус → IN_PROCESS / WAITING_FOR_STORE_CONFIRM\r\n  \r\n      alt Варіант А: result_callback передано\r\n          Mono-->>Store: POST result_callback\r\n      else Варіант Б: Самостійний запит\r\n          loop Polling статусу\r\n              Store->>Mono: POST /api/order/state\r\n          end\r\n      end\r\n  \r\n      alt Варіант А: Товар видано\r\n          Store->>Mono: POST /api/order/confirm\r\n          Store->>Client: Видача товару\r\n      else Варіант Б: Відмова у видачі\r\n          Store->>Mono: POST /api/order/reject\r\n      end\r\n  ```\r\n\r\n</details>\r\n\r\n![Діаграма процесу](/docs/flow_diagram.svg)\r\n\r\n---\r\n\r\n## Автентифікація та безпека\r\n\r\nВсі API запити повинні містити два обов'язкові заголовки:\r\n\r\n- `store-id` - Ваш унікальний ідентифікатор магазину\r\n- `signature` - HMAC-SHA256 підпис тіла запиту\r\n\r\n### Розрахунок підпису\r\n\r\nПідпис захищає від атак типу \"man in the middle\" та забезпечує цілісність запиту.\r\n\r\n**Формула:**\r\n\r\n```\r\nsignature = Base64(HMAC-SHA256(request_body_bytes, store_secret))\r\n```\r\n\r\n### Приклади реалізації\r\n\r\n#### Java\r\n\r\n```java\r\nimport java.nio.charset.StandardCharsets;\r\nimport java.security.InvalidKeyException;\r\nimport java.security.NoSuchAlgorithmException;\r\nimport java.util.Base64;\r\nimport javax.crypto.Mac;\r\nimport javax.crypto.spec.SecretKeySpec;\r\n\r\npublic class SignatureCalculator {\r\n\r\n    public static String calculateSignature(String storeSecret, String requestBody) {\r\n        try {\r\n            Mac mac = Mac.getInstance(\"HmacSHA256\");\r\n            SecretKeySpec secretKey = new SecretKeySpec(\r\n                    storeSecret.getBytes(StandardCharsets.UTF_8),\r\n                    \"HmacSHA256\"\r\n            );\r\n            mac.init(secretKey);\r\n\r\n            byte[] hash = mac.doFinal(requestBody.getBytes(StandardCharsets.UTF_8));\r\n            return Base64.getEncoder().encodeToString(hash);\r\n\r\n        } catch (NoSuchAlgorithmException | InvalidKeyException e) {\r\n            throw new RuntimeException(\"Помилка розрахунку підпису\", e);\r\n        }\r\n    }\r\n}\r\n```\r\n\r\n#### PHP\r\n\r\n```php\r\n<?php\r\nfunction calculateSignature($storeSecret, $requestBody) {\r\n    return base64_encode(hash_hmac('sha256', $requestBody, $storeSecret, true));\r\n}\r\n\r\n// Приклад використання\r\n$requestBody = '{\"store_order_id\":\"ORD-001\",\"client_phone\":\"+380501234567\",\"total_sum\":1500.00}';\r\n$signature = calculateSignature('your_store_secret', $requestBody);\r\n\r\n$headers = [\r\n    'Content-Type: application/json',\r\n    'store-id: your_store_id',\r\n    'signature: ' . $signature\r\n];\r\n?>\r\n```\r\n\r\n#### Postman Pre-request скрипт\r\n\r\n```javascript\r\n// Отримати змінні колекції: key, storeId\r\nconst key = pm.collectionVariables.get(\"key\");\r\nconst storeId = pm.collectionVariables.get(\"storeId\");\r\n\r\n// Отримати тіло запиту\r\nlet body = \"\";\r\nif (pm.request.body && pm.request.body.raw) {\r\n    body = pm.request.body.raw;\r\n}\r\n\r\n// Розрахувати підпис\r\nconst keyUtf8 = CryptoJS.enc.Utf8.parse(key);\r\nconst hash = CryptoJS.HmacSHA256(body, keyUtf8);\r\nconst signature = CryptoJS.enc.Base64.stringify(hash);\r\n\r\n// Встановити заголовки\r\npm.request.headers.upsert({key: \"signature\", value: signature});\r\npm.request.headers.upsert({key: \"store-id\", value: storeId});\r\n```\r\n\r\n---\r\n\r\n## Callback сповіщення\r\n\r\nCallback надають оновлення статусу замовлення в реальному часі.\r\n\r\nКоли ви вказуєте `result_callback` при створенні замовлення, Монобанк надсилатиме POST запити на ваш endpoint.\r\n\r\n### Коли надсилається callback\r\n\r\n**Важливо:** Callback надсилається тільки у двох випадках:\r\n\r\n- При переході в статус `IN_PROCESS/WAITING_FOR_STORE_CONFIRM` (клієнт підтвердив ПЧ)\r\n- При переході в будь-який статус `FAIL/*` (відмова з будь-якої причини)\r\n\r\nДля інших статусів (наприклад, `IN_PROCESS/WAITING_FOR_CLIENT`) callback не надсилається - використовуйте polling через\r\n`/api/order/state`.\r\n\r\n### Формат Callback\r\n\r\n```json\r\n{\r\n  \"order_id\": \"fa4a8249-336e-4e6d-9b85-79bc8be62377\",\r\n  \"state\": \"IN_PROCESS\",\r\n  \"order_sub_state\": \"WAITING_FOR_STORE_CONFIRM\"\r\n}\r\n```\r\n\r\n### Безпека Callback\r\n\r\nПеревіряйте автентичність callback:\r\n\r\n1. Розрахуйте підпис тим же методом, що й для запитів\r\n2. Порівняйте з заголовком `signature` з callback запиту\r\n3. Обробляйте тільки якщо підписи збігаються\r\n\r\n### Альтернатива: Опитування статусу\r\n\r\nЯкщо callback не підходить або необхідно отримувати проміжні статуси, використовуйте `/api/order/state` для ручної\r\nперевірки статусу замовлення.\r\n\r\n---\r\n\r\n## Довідник статусів замовлень\r\n\r\nРозуміння статусів замовлень критично важливе для правильної інтеграції:\r\n\r\n| Статус         | Підстатус                       | Опис                                                    | Необхідні дії                                                         |\r\n|----------------|---------------------------------|---------------------------------------------------------|-----------------------------------------------------------------------|\r\n| SUCCESS        | ACTIVE                          | Замовлення завершено, товар видано, ПЧ активна          | Немає - фінальний статус                                              |\r\n| SUCCESS        | DONE                            | ПЧ повністю сплачена клієнтом                           | Немає - фінальний статус                                              |\r\n| SUCCESS        | RETURNED                        | Товар повернено, гроші повернуто клієнту                | Немає - фінальний статус                                              |\r\n| IN_PROCESS     | WAITING_FOR_CLIENT              | Очікування підтвердження клієнта в застосунку Монобанку | Чекати дії клієнта                                                    |\r\n| **IN_PROCESS** | **WAITING_FOR_STORE_CONFIRM**   | **Клієнт підтвердив - можна видавати товар**            | **Видати товар та викликати `/api/order/confirm`**                    |\r\n| FAIL           | CLIENT_NOT_FOUND                | Клієнта не знайдено або він не є клієнтом Монобанку     | Перевірити формат номера телефону                                     |\r\n| FAIL           | EXCEEDED_SUM_LIMIT              | Клієнт перевищив ліміт на ПЧ                            | Зменшити суму замовлення або використати інший спосіб оплати          |\r\n| FAIL           | EXISTS_OTHER_OPEN_ORDER         | У клієнта є інше незавершене замовлення в ПЧ            | Почекати 15 хвилин або попросити клієнта скасувати існуюче замовлення |\r\n| FAIL           | NOT_ENOUGH_MONEY_FOR_INIT_DEBIT | Недостатньо коштів для першого платежу                  | Клієнт повинен поповнити картку                                       |\r\n| FAIL           | REJECTED_BY_CLIENT              | Клієнт відхилив ПЧ                                      | Спробувати пізніше або використати інший спосіб оплати                |\r\n| FAIL           | PAY_PARTS_ARE_NOT_ACCEPTABLE    | Неприйнятна кількість платежів зі сторони магазину      | Зв'язатися з підтримкою для деталей                                   |\r\n| FAIL           | FRAUD_REJECTED                  | Замовлення відхилено системою запобігання шахрайству    | Зв'язатися з підтримкою для деталей                                   |\r\n| FAIL           | RESTRICTED_BY_RISKS             | Обмеження системи управління ризиками                   | Зв'язатися з підтримкою для деталей                                   |\r\n| FAIL           | CLIENT_PUSH_TIMEOUT             | Клієнт не відповів протягом 15 хвилин                   | Зв'язатися з клієнтом або повторити спробу                            |\r\n| FAIL           | REJECTED_BY_STORE               | Магазин скасував замовлення                             | Немає - замовлення скасовано                                          |\r\n| FAIL           | FAIL                            | Внутрішня помилка банку                                 | Повторити через 5 хвилин                                              |\r\n\r\n### Ключовий статус: WAITING_FOR_STORE_CONFIRM\r\n\r\nЦе найважливіший статус - він означає, що клієнт схвалив кредит і ви можете безпечно видавати товар.\r\n\r\nЗавжди викликайте `/api/order/confirm` після видачі товару для активації ПЧ.\r\n\r\n---\r\n\r\n## Середовища\r\n\r\n### Тестове середовище (Пісочниця)\r\n\r\nІдеально підходить для початкової інтеграції та тестування різних сценаріїв.\r\n\r\n**Дані для доступу:**\r\n\r\n- URL: https://u2-demo-ext.mono.st4g3.com\r\n- Store ID: `test_store_with_confirm`\r\n- Секретний ключ: `secret_98765432--123-123`\r\n\r\n**Тестові сценарії:**\r\nВикористовуйте різні закінчення номерів телефонів для імітації різних результатів:\r\n\r\n| Закінчення телефону | Сценарій                                      | Час callback |\r\n|---------------------|-----------------------------------------------|--------------|\r\n| `...1`              | ✅ Успішне схвалення                           | 5 секунд     |\r\n| `...2`              | ⏳ Очікування клієнта                          | Без callback |\r\n| `...3`              | ❌ Недостатній ліміт                           | 5 секунд     |\r\n| `...4`              | ✅ Схвалено, очікування підтвердження магазину | 5 секунд     |\r\n\r\n**Приклад:** `+380501234561` імітує успішне схвалення.\r\n\r\n### Stage середовище (Передпродакшн)\r\n\r\nРеальна інтеграція з застосунком Монобанку для комплексного тестування.\r\n\r\n**Дані для доступу:**\r\n\r\n- URL: https://u2-ext.mono.st4g3.com\r\n- Store ID: `COMFY`\r\n- Секретний ключ: `sign_key`\r\n\r\nВикористовуйте це середовище після успішного тестування в пісочниці для перевірки взаємодії з реальним застосунком.\r\n\r\n### Production середовище\r\n\r\n**URL:** https://u2.monobank.com.ua\r\n\r\nВикористовуйте ваші продакшн дані, надані Монобанком після успішного тестування та схвалення.\r\n\r\n---\r\n\r\n## Обробка помилок\r\n\r\n### Використовувані HTTP статус коди\r\n\r\n- `200` - Успіх\r\n- `201` - Замовлення успішно створено\r\n- `400` - Поганий запит (помилки валідації)\r\n- `401` - Підпис не передано або не валідний\r\n- `403` - Заборонено (магазин не має права створювати замовлення)\r\n- `404` - Замовлення не знайдено\r\n- `429` - Перевищено ліміт запитів\r\n- `500` - Внутрішня помилка сервісу\r\n\r\n### Формат відповіді з помилкою\r\n\r\n```json\r\n{\r\n  \"message\": \"Котик перегриз кабель до сервера. Спробуйте ще раз через хвилинку 🐱\"\r\n}\r\n```\r\n\r\n---\r\n\r\n## Найкращі практики\r\n\r\n### Створення замовлень\r\n\r\n1. Валідуйте дані клієнта перед надсиланням запитів\r\n2. Використовуйте унікальний `store_order_id` для запобігання дублікатів\r\n3. Завжди вказуйте `result_callback` для оновлень в реальному часі\r\n4. Обробляйте ідемпотентність - дублікат запиту з однаковим `store_order_id` повертає ідентифікатор замовлення що вже\r\n   існує, замість створення нового\r\n\r\n### Моніторинг статусу\r\n\r\n1. Обробляйте `WAITING_FOR_STORE_CONFIRM` негайно\r\n2. Налаштуйте правильну обробку callback з перевіркою підпису\r\n3. Реалізуйте резервне опитування (polling), якщо callback не працюють\r\n4. Логуйте всі зміни статусу для налагодження\r\n\r\n### Відновлення після помилок\r\n\r\n1. Повторюйте при тимчасових збоях (5xx помилки)\r\n2. Не повторюйте помилки валідації (4xx помилки)\r\n3. Реалізуйте експоненційну затримку для повторів\r\n\r\n---\r\n\r\n## Підтримка та усунення неполадок\r\n\r\n### AI Асистент\r\n\r\nОтримайте миттєву допомогу з питань інтеграції:\r\n🤖 [Помічник API Монобанку](https://chatgpt.com/g/g-6kcOAHI3i-pomichnik-api-pokupki-chastinami)\r\n\r\n### Запланувати сесію тестування\r\n\r\nТестування на передпроді проходить у текстовому форматі.\r\n\r\nЗабронювати тайм-слот для проведення тестування:\r\n📅 [Запланувати тестування](https://calendar.app.google/9BBqXbDF8K2SJsMy9)\r\n\r\n### Технічна підтримка\r\n\r\nПри зверненні до підтримки завжди включайте:\r\n\r\n- **Trace-Id** заголовок з API відповідей\r\n- **Store ID** та **Order ID**\r\n- **Приклади запитів/відповідей**\r\n- **Повідомлення про помилки** та **часові мітки**\r\n\r\nЗаголовок `Trace-Id` включається в усі API відповіді та допомагає нашій команді підтримки швидко знайти ваші запити в\r\nлогах.\r\n\r\n### Поширені проблеми\r\n\r\n**Помилка валідації підпису**\r\n\r\n- Перевірте кодування тіла запиту (UTF-8)\r\n- Перевірте правильність секретного ключа\r\n- Переконайтеся, що немає зайвих пробілів у заголовках\r\n\r\n**Клієнта не знайдено**\r\n\r\n- Перевірте формат номера телефону (+380XXXXXXXXX)\r\n- Переконайтеся, що клієнт є клієнтом Монобанку\r\n- Перевірте, чи це фінансовий номер телефону\r\n\r\n**Помилка створення замовлення**\r\n\r\n- Валідуйте всі обов'язкові поля\r\n- Перевірте ліміти сум (мінімум 1 грн)\r\n- Переконайтеся, що у клієнта немає активних замовлень\r\n\r\n---\r\n\r\n## Швидкий старт - чек-лист\r\n\r\n- [ ] Отримати тестові дані від Монобанку\r\n- [ ] Реалізувати розрахунок підпису\r\n- [ ] Протестувати створення замовлення в пісочниці\r\n- [ ] Налаштувати callback endpoint\r\n- [ ] Протестувати всі статуси замовлень\r\n- [ ] Реалізувати обробку помилок\r\n- [ ] Протестувати в stage середовищі\r\n- [ ] Отримати продакшн дані\r\n- [ ] Розгорнути в продакшн\r\n- [ ] Моніторити та підтримувати\r\n\r\nГотові до інтеграції? Почніть з пісочниці та слідуйте нашій покроковій документації API🐾",
+    "description": "# Покупка Частинами\n\n## Огляд\n\nAPI Покупки Частинами Монобанку дозволяє магазинам пропонувати клієнтам оплату товарів та послуг у ПЧ.\nЦей сервіс надає клієнтам можливість розділити покупку на кілька платежів без відсотків, роблячи товари доступнішими, а\nмагазини отримують оплату миттєво.\n\n### Ключові можливості\n\n- Миттєве схвалення - кредитне рішення за 20 секунд\n- Без відсотків для клієнтів (комісію сплачує магазин)\n- Гнучка Покупка Частинами - від 3 до 25 платежів\n- Сповіщення в реальному часі через callback або polling\n- Детальна звітність та аналітика\n- Ідемпотентні операції для запобігання дублювання замовлень\n\n---\n\n## Схема інтеграції\n\nТипова інтеграція відбувається за наступною схемою:\n\n1. Клієнт обирає товари та вибирає оплату через Покупку Частинами\n2. Магазин створює замовлення через `/api/order/create`\n3. Клієнт отримує push-сповіщення в застосунку Монобанку\n4. Клієнт підтверджує договір ПЧ і списується перший платіж\n5. Магазин отримує callback зі статусом `WAITING_FOR_STORE_CONFIRM`\n6. Магазин видає товар та викликає `/api/order/confirm`\n7. Покупка Частинами стає активною\n\n### Діаграма процесу\n\n<details>\n  <summary>Відкрити Mermaid діаграму</summary>\n\n  ```mermaid\n  sequenceDiagram\n      actor Client as Клієнт\n      participant Store as Магазин Backend\n      participant Mono as Monobank Backend\n      participant App as Мобільний застосунок\n      autonumber\n  \n      Client->>Store: Оформлює замовлення\n      Store->>Mono: POST /api/order/create<br>(опційно: result_callback)\n      Mono->>App: Push на підтвердження\n      Client->>App: Підтверджує ПЧ\n      App->>Mono: Approve\n      note over Mono: Статус → IN_PROCESS / WAITING_FOR_STORE_CONFIRM\n  \n      alt Варіант А: result_callback передано\n          Mono-->>Store: POST result_callback\n      else Варіант Б: Самостійний запит\n          loop Polling статусу\n              Store->>Mono: POST /api/order/state\n          end\n      end\n  \n      alt Варіант А: Товар видано\n          Store->>Mono: POST /api/order/confirm\n          Store->>Client: Видача товару\n      else Варіант Б: Відмова у видачі\n          Store->>Mono: POST /api/order/reject\n      end\n  ```\n\n</details>\n\n![Діаграма процесу](/docs/flow_diagram.svg)\n\n---\n\n## Автентифікація та безпека\n\nВсі API запити повинні містити два обов'язкові заголовки:\n\n- `store-id` - Ваш унікальний ідентифікатор магазину\n- `signature` - HMAC-SHA256 підпис тіла запиту\n\n### Розрахунок підпису\n\nПідпис захищає від атак типу \"man in the middle\" та забезпечує цілісність запиту.\n\n**Формула:**\n\n```\nsignature = Base64(HMAC-SHA256(request_body_bytes, store_secret))\n```\n\n### Приклади реалізації\n\n#### Java\n\n```java\nimport java.nio.charset.StandardCharsets;\nimport java.security.InvalidKeyException;\nimport java.security.NoSuchAlgorithmException;\nimport java.util.Base64;\nimport javax.crypto.Mac;\nimport javax.crypto.spec.SecretKeySpec;\n\npublic class SignatureCalculator {\n\n    public static String calculateSignature(String storeSecret, String requestBody) {\n        try {\n            Mac mac = Mac.getInstance(\"HmacSHA256\");\n            SecretKeySpec secretKey = new SecretKeySpec(\n                    storeSecret.getBytes(StandardCharsets.UTF_8),\n                    \"HmacSHA256\"\n            );\n            mac.init(secretKey);\n\n            byte[] hash = mac.doFinal(requestBody.getBytes(StandardCharsets.UTF_8));\n            return Base64.getEncoder().encodeToString(hash);\n\n        } catch (NoSuchAlgorithmException | InvalidKeyException e) {\n            throw new RuntimeException(\"Помилка розрахунку підпису\", e);\n        }\n    }\n}\n```\n\n#### PHP\n\n```php\n<?php\nfunction calculateSignature($storeSecret, $requestBody) {\n    return base64_encode(hash_hmac('sha256', $requestBody, $storeSecret, true));\n}\n\n// Приклад використання\n$requestBody = '{\"store_order_id\":\"ORD-001\",\"client_phone\":\"+380501234567\",\"total_sum\":1500.00}';\n$signature = calculateSignature('your_store_secret', $requestBody);\n\n$headers = [\n    'Content-Type: application/json',\n    'store-id: your_store_id',\n    'signature: ' . $signature\n];\n?>\n```\n\n#### Postman Pre-request скрипт\n\n```javascript\n// Отримати змінні колекції: key, storeId\nconst key = pm.collectionVariables.get(\"key\");\nconst storeId = pm.collectionVariables.get(\"storeId\");\n\n// Отримати тіло запиту\nlet body = \"\";\nif (pm.request.body && pm.request.body.raw) {\n    body = pm.request.body.raw;\n}\n\n// Розрахувати підпис\nconst keyUtf8 = CryptoJS.enc.Utf8.parse(key);\nconst hash = CryptoJS.HmacSHA256(body, keyUtf8);\nconst signature = CryptoJS.enc.Base64.stringify(hash);\n\n// Встановити заголовки\npm.request.headers.upsert({key: \"signature\", value: signature});\npm.request.headers.upsert({key: \"store-id\", value: storeId});\n```\n\n---\n\n## Callback сповіщення\n\nCallback надають оновлення статусу замовлення в реальному часі.\n\nКоли ви вказуєте `result_callback` при створенні замовлення, Монобанк надсилатиме POST запити на ваш endpoint.\n\n### Коли надсилається callback\n\n**Важливо:** Callback надсилається тільки у двох випадках:\n\n- При переході в статус `IN_PROCESS/WAITING_FOR_STORE_CONFIRM` (клієнт підтвердив ПЧ)\n- При переході в будь-який статус `FAIL/*` (відмова з будь-якої причини)\n\nДля інших статусів (наприклад, `IN_PROCESS/WAITING_FOR_CLIENT`) callback не надсилається - використовуйте polling через\n`/api/order/state`.\n\n### Формат Callback\n\n```json\n{\n  \"order_id\": \"fa4a8249-336e-4e6d-9b85-79bc8be62377\",\n  \"state\": \"IN_PROCESS\",\n  \"order_sub_state\": \"WAITING_FOR_STORE_CONFIRM\"\n}\n```\n\n### Безпека Callback\n\nПеревіряйте автентичність callback:\n\n1. Розрахуйте підпис тим же методом, що й для запитів\n2. Порівняйте з заголовком `signature` з callback запиту\n3. Обробляйте тільки якщо підписи збігаються\n\n### Альтернатива: Опитування статусу\n\nЯкщо callback не підходить або необхідно отримувати проміжні статуси, використовуйте `/api/order/state` для ручної\nперевірки статусу замовлення.\n\n---\n\n## Довідник статусів замовлень\n\nРозуміння статусів замовлень критично важливе для правильної інтеграції:\n\n| Статус         | Підстатус                       | Опис                                                    | Необхідні дії                                                         |\n|----------------|---------------------------------|---------------------------------------------------------|-----------------------------------------------------------------------|\n| SUCCESS        | ACTIVE                          | Замовлення завершено, товар видано, ПЧ активна          | Немає - фінальний статус                                              |\n| SUCCESS        | DONE                            | ПЧ повністю сплачена клієнтом                           | Немає - фінальний статус                                              |\n| SUCCESS        | RETURNED                        | Товар повернено, гроші повернуто клієнту                | Немає - фінальний статус                                              |\n| IN_PROCESS     | WAITING_FOR_CLIENT              | Очікування підтвердження клієнта в застосунку Монобанку | Чекати дії клієнта                                                    |\n| **IN_PROCESS** | **WAITING_FOR_STORE_CONFIRM**   | **Клієнт підтвердив - можна видавати товар**            | **Видати товар та викликати `/api/order/confirm`**                    |\n| FAIL           | CLIENT_NOT_FOUND                | Клієнта не знайдено або він не є клієнтом Монобанку     | Перевірити формат номера телефону                                     |\n| FAIL           | EXCEEDED_SUM_LIMIT              | Клієнт перевищив ліміт на ПЧ                            | Зменшити суму замовлення або використати інший спосіб оплати          |\n| FAIL           | EXISTS_OTHER_OPEN_ORDER         | У клієнта є інше незавершене замовлення в ПЧ            | Почекати 15 хвилин або попросити клієнта скасувати існуюче замовлення |\n| FAIL           | NOT_ENOUGH_MONEY_FOR_INIT_DEBIT | Недостатньо коштів для першого платежу                  | Клієнт повинен поповнити картку                                       |\n| FAIL           | REJECTED_BY_CLIENT              | Клієнт відхилив ПЧ                                      | Спробувати пізніше або використати інший спосіб оплати                |\n| FAIL           | PAY_PARTS_ARE_NOT_ACCEPTABLE    | Неприйнятна кількість платежів зі сторони магазину      | Зв'язатися з підтримкою для деталей                                   |\n| FAIL           | FRAUD_REJECTED                  | Замовлення відхилено системою запобігання шахрайству    | Зв'язатися з підтримкою для деталей                                   |\n| FAIL           | RESTRICTED_BY_RISKS             | Обмеження системи управління ризиками                   | Зв'язатися з підтримкою для деталей                                   |\n| FAIL           | CLIENT_PUSH_TIMEOUT             | Клієнт не відповів протягом 15 хвилин                   | Зв'язатися з клієнтом або повторити спробу                            |\n| FAIL           | REJECTED_BY_STORE               | Магазин скасував замовлення                             | Немає - замовлення скасовано                                          |\n| FAIL           | FAIL                            | Внутрішня помилка банку                                 | Повторити через 5 хвилин                                              |\n\n### Ключовий статус: WAITING_FOR_STORE_CONFIRM\n\nЦе найважливіший статус - він означає, що клієнт схвалив кредит і ви можете безпечно видавати товар.\n\nЗавжди викликайте `/api/order/confirm` після видачі товару для активації ПЧ.\n\n---\n\n## Середовища\n\n### Тестове середовище (Пісочниця)\n\nІдеально підходить для початкової інтеграції та тестування різних сценаріїв.\n\n**Дані для доступу:**\n\n- URL: https://u2-demo-ext.mono.st4g3.com\n- Store ID: `test_store_with_confirm`\n- Секретний ключ: `secret_98765432--123-123`\n\n**Тестові сценарії:**\nВикористовуйте різні закінчення номерів телефонів для імітації різних результатів:\n\n| Закінчення телефону | Сценарій                                      | Час callback |\n|---------------------|-----------------------------------------------|--------------|\n| `...1`              | ✅ Успішне схвалення                           | 5 секунд     |\n| `...2`              | ⏳ Очікування клієнта                          | Без callback |\n| `...3`              | ❌ Недостатній ліміт                           | 5 секунд     |\n| `...4`              | ✅ Схвалено, очікування підтвердження магазину | 5 секунд     |\n\n**Приклад:** `+380501234561` імітує успішне схвалення.\n\n### Stage середовище (Передпродакшн)\n\nРеальна інтеграція з застосунком Монобанку для комплексного тестування.\n\n**Дані для доступу:**\n\n- URL: https://u2-ext.mono.st4g3.com\n- Store ID: `COMFY`\n- Секретний ключ: `sign_key`\n\nВикористовуйте це середовище після успішного тестування в пісочниці для перевірки взаємодії з реальним застосунком.\n\n### Production середовище\n\n**URL:** https://u2.monobank.com.ua\n\nВикористовуйте ваші продакшн дані, надані Монобанком після успішного тестування та схвалення.\n\n---\n\n## Обробка помилок\n\n### Використовувані HTTP статус коди\n\n- `200` - Успіх\n- `201` - Замовлення успішно створено\n- `400` - Поганий запит (помилки валідації)\n- `401` - Підпис не передано або не валідний\n- `403` - Заборонено (магазин не має права створювати замовлення)\n- `404` - Замовлення не знайдено\n- `429` - Перевищено ліміт запитів\n- `500` - Внутрішня помилка сервісу\n\n### Формат відповіді з помилкою\n\n```json\n{\n  \"message\": \"Котик перегриз кабель до сервера. Спробуйте ще раз через хвилинку 🐱\"\n}\n```\n\n---\n\n## Найкращі практики\n\n### Створення замовлень\n\n1. Валідуйте дані клієнта перед надсиланням запитів\n2. Використовуйте унікальний `store_order_id` для запобігання дублікатів\n3. Завжди вказуйте `result_callback` для оновлень в реальному часі\n4. Обробляйте ідемпотентність - дублікат запиту з однаковим `store_order_id` повертає ідентифікатор замовлення що вже\n   існує, замість створення нового\n\n### Моніторинг статусу\n\n1. Обробляйте `WAITING_FOR_STORE_CONFIRM` негайно\n2. Налаштуйте правильну обробку callback з перевіркою підпису\n3. Реалізуйте резервне опитування (polling), якщо callback не працюють\n4. Логуйте всі зміни статусу для налагодження\n\n### Відновлення після помилок\n\n1. Повторюйте при тимчасових збоях (5xx помилки)\n2. Не повторюйте помилки валідації (4xx помилки)\n3. Реалізуйте експоненційну затримку для повторів\n\n---\n\n## Підтримка та усунення неполадок\n\n### AI Асистент\n\nОтримайте миттєву допомогу з питань інтеграції:\n🤖 [Помічник API Монобанку](https://chatgpt.com/g/g-6kcOAHI3i-pomichnik-api-pokupki-chastinami)\n\n### Запланувати сесію тестування\n\nТестування на передпроді проходить у текстовому форматі.\n\nЗабронювати тайм-слот для проведення тестування:\n📅 [Запланувати тестування](https://calendar.app.google/uJ7x3iGWHgSBycmK7)\n\n### Технічна підтримка\n\nПри зверненні до підтримки завжди включайте:\n\n- **Trace-Id** заголовок з API відповідей\n- **Store ID** та **Order ID**\n- **Приклади запитів/відповідей**\n- **Повідомлення про помилки** та **часові мітки**\n\nЗаголовок `Trace-Id` включається в усі API відповіді та допомагає нашій команді підтримки швидко знайти ваші запити в\nлогах.\n\n### Поширені проблеми\n\n**Помилка валідації підпису**\n\n- Перевірте кодування тіла запиту (UTF-8)\n- Перевірте правильність секретного ключа\n- Переконайтеся, що немає зайвих пробілів у заголовках\n\n**Клієнта не знайдено**\n\n- Перевірте формат номера телефону (+380XXXXXXXXX)\n- Переконайтеся, що клієнт є клієнтом Монобанку\n- Перевірте, чи це фінансовий номер телефону\n\n**Помилка створення замовлення**\n\n- Валідуйте всі обов'язкові поля\n- Перевірте ліміти сум (мінімум 1 грн)\n- Переконайтеся, що у клієнта немає активних замовлень\n\n---\n\n## Швидкий старт - чек-лист\n\n- [ ] Отримати тестові дані від Монобанку\n- [ ] Реалізувати розрахунок підпису\n- [ ] Протестувати створення замовлення в пісочниці\n- [ ] Налаштувати callback endpoint\n- [ ] Протестувати всі статуси замовлень\n- [ ] Реалізувати обробку помилок\n- [ ] Протестувати в stage середовищі\n- [ ] Отримати продакшн дані\n- [ ] Розгорнути в продакшн\n- [ ] Моніторити та підтримувати\n\nГотові до інтеграції? Почніть з пісочниці та слідуйте нашій покроковій документації API🐾",
     "version": "1 "
   },
   "servers": [
     {
-      "url": "http://localhost:8080",
+      "url": "https://u2.monobank.com.ua",
       "description": "Generated server url"
     }
   ],
@@ -19,22 +19,22 @@
   ],
   "tags": [
     {
-      "name": "Заявки на ПЧ",
+      "name": "Сервіси/Заявки на ПЧ",
       "description": "Управління заявками на Покупку Частинами",
       "x-order": "0"
     },
     {
-      "name": "Валідація клієнтів",
+      "name": "Сервіси/Валідація клієнтів",
       "description": "Перевірка існування клієнтів у системі Monobank",
       "x-order": "1"
     },
     {
-      "name": "Гарантійні листи",
+      "name": "Сервіси/Гарантійні листи",
       "description": "Генерація гарантійних листів у PDF та отримання структурованих даних у JSON/XML форматах",
       "x-order": "2"
     },
     {
-      "name": "Звітність",
+      "name": "Сервіси/Звітність",
       "description": "Денні звіти операцій та фінансова аналітика для магазинів-партнерів",
       "x-order": "3"
     }
@@ -43,7 +43,7 @@
     "/api/order/guarantee/letter": {
       "post": {
         "tags": [
-          "Гарантійні листи"
+          "Сервіси/Гарантійні листи"
         ],
         "summary": "Гарантійний лист у форматі PDF",
         "description": "Генерація та завантаження гарантійного листа у PDF форматі",
@@ -115,7 +115,7 @@
     "/api/order/create": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Створення заявки",
         "description": "Створює нову заявку на ПЧ для клієнта Monobank.\n\n**Важливо:**\n- Клієнт повинен бути активним користувачем Monobank\n- Сума заявки не повинна перевищувати доступний ліміт клієнта\n- У клієнта не повинно бути інших незавершених заявок на ПЧ\n- Опційно вказуйте `result_callback` для отримання callback зі статусом\n\n**Ідемпотентність:**\nПри повторному запиті з однаковим `store_order_id` (ідентифікатор на стороні магазину):\n- Нова заявка НЕ створюється\n- Повертається ID існуючої заявки в системі\nЦе захищає від випадкового дублювання заявок\n\n**Процес:**\n1. Заявка створюється зі статусом `IN_PROCESS`\n2. Клієнт отримує push-повідомлення в додатку Monobank\n3. Після підтвердження клієнтом дочірній статус змінюється на `WAITING_FOR_STORE_CONFIRM`\n4. Магазин отримує callback або може перевірити статус через `/api/order/state`\n",
@@ -188,7 +188,7 @@
     "/api/client/validate": {
       "post": {
         "tags": [
-          "Валідація клієнтів"
+          "Сервіси/Валідація клієнтів"
         ],
         "summary": "Валідація клієнта (застарілий)",
         "description": "Перевірка існування клієнта в системі. Використовуйте `/api/v2/client/validate`",
@@ -272,7 +272,7 @@
     "/api/v2/client/validate": {
       "post": {
         "tags": [
-          "Валідація клієнтів"
+          "Сервіси/Валідація клієнтів"
         ],
         "summary": "Валідація клієнта",
         "description": "Перевірка чи є клієнт зареєстрованим в системі Монобанку",
@@ -355,7 +355,7 @@
     "/api/order/state": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Перевірка статусу заявки",
         "description": "Отримує поточний статус заявки та інформацію про її обробку.\n\n**Використання:**\n- Перевірка статусу самостійно замість отримання callback\n- Моніторинг прогресу обробки заявки\n- Визначення необхідних дій (підтвердження, скасування)\n\n**Ключові статуси:**\n- `IN_PROCESS/WAITING_FOR_CLIENT` - очікування підтвердження клієнтом\n- `IN_PROCESS/WAITING_FOR_STORE_CONFIRM` - готово до видачі товару\n- `SUCCESS/ACTIVE` - товар видано, ПЧ активна\n- `SUCCESS/DONE` - ПЧ повністю погашена\n- `FAIL/*` - заявка відхилена з різних причин\n\n**Важливо:** Дочірній статус `WAITING_FOR_STORE_CONFIRM` означає, що клієнт підтвердив кредит і можна видавати товар.\n\n**Callback:** Якщо вказано `result_callback` при створенні, статус буде надіслано POST-запитом.\n",
@@ -428,10 +428,10 @@
     "/api/order/data/for/guarantee/letter": {
       "post": {
         "tags": [
-          "Гарантійні листи"
+          "Сервіси/Гарантійні листи"
         ],
-        "summary": "Дані гарантійного листа (JSON/XML)",
-        "description": "Приклад гарантійного листа: <br/>\n\n```xml\n<?xml version=\"1.0\"?>\n<guarantee>\n  <header>\n     <request_id>\"180702CM023453\"</request_id>\n     <answer_datetime>2018-07-02T12:05:10</answer_datetime>\n     <from_organization>\"Монобанк\"</from_organization>\n     <organization_id>\"11111111\"</organization_id>\n  </header>\n  <expansion>\n    <customer>\n      <last_name>\"Іванов\"</last_name>\n      <first_name>\"Василій\"</first_name>\n      <middle_name>\"Ігорович\"</middle_name>\n      <doc_type>\"0\"</doc_type>\n      <doc_series>\"АК\"</doc_series>\n      <doc_number>\"548967\"</doc_number>\n      <doc_issued>\"Дніпровським РВ ДМУ УМВС у Дніпропетровській\n                  області\"</doc_issued>\n      <doc_date_of_issue>\"2000-05-12\"</doc_date_of_issue>\n      <inn>\"1234567890\"</inn>\n    </customer>\n    <invoice>\n       <invoice_number>\"СФGIT-0000000134\"</invoice_number>\n       <invoice_date>\"2018-07-02\"</invoice_date>\n       <invoice_amount>\"3500.00\"</invoice_amount>\n    </invoice>\n    <payment_destination>\n       <dest_id>\"36962487\"</dest_id>\n       <dest_name>\"ТОВ \\\"Рога и копыта\\\"\"</dest_name>\n       <dest_mfo>\"305299\"</dest_mfo>\n       <dest_bank_name>\"\\\"IBOX\\\"\"</dest_bank_name>\n       <dest_acc_number>\"26000000000\"</dest_acc_number>\n    </payment_destination>\n    <bank>\n       <agreement>\"КД-0001\"</agreement>\n       <agreement_date>\"20.07.2018\"</agreement_date>\n       <credit_amount>\"3500.00\"</credit_amount>\n       <product_types>\"БР\"</product_types>\n       <available_parts_count>\"7\"</available_parts_count>\n       <customer_pay_amount>\"0.00\"</customer_pay_amount>\n       <bank_id>\"21133352\"</bank_id>\n       <bank_name>\"ПАТ \\\"УНІВЕРСАЛ БАНК\\\"\"</bank_name>\n       <bank_executive>\"Петренко І.В.\"</bank_executive>\n     </bank>\n     <sign>12E0F76458C6D1E4</sign>\n     <stamp>1199A0F5E7C4A212</stamp>\n   </expansion>\n</guarantee>\n```\n\n\nЕлектронний цифровий підпис накладається на рядок, що складається шляхом конкатенації значень таких атрибутів відповіді:<br/>\n`\"customer\".\"last_name\"`<br/>\n`\"customer\".\"first_name\"`<br/>\n`\"customer\".\"middle_name\"`<br/>\n`\"customer\".\"doc_series\"`<br/>\n`\"customer\".\"doc_number\"`<br/>\n`\"customer\".\"doc_issued\"`<br/>\n`\"customer\".\"doc_date_of_issue\"`<br/>\n`\"customer\".\"inn\"`<br/>\n`\"invoice\".\"invoice_number\"`<br/>\n`\"invoice\".\"invoice_date\"`<br/>\n`\"invoice\".\"invoice_amount\"`<br/>\n`\"payment_destination\".\"dest_id\"`<br/>\n`\"payment_destination\".\"dest_name\"`<br/>\n`\"payment_destination\".\"dest_mfo\"`<br/>\n`\"payment_destination\".\"dest_bank_name\"`<br/>\n`\"payment_destination\".\"dest_acc_number\"`<br/>\n`\"header\".\"answer_datetime\"`<br/>\n`\"bank\".\"agreement\"`<br/>\n`\"bank\".\"agreement_date\"`<br/>\n`\"bank\".\"credit_amount\"`<br/>\n`\"bank\".\"customer_pay_amount\"`<br/>\n`\"bank\".\"bank_id\"`<br/>\n`\"bank\".\"bank_name\"`<br/>\n`\"bank\".\"bank_executive\"`<br/>\n\nЗначення атрибутів мають бути перераховані саме у зазначеному порядку, без пробілів чи інших роздільників.\nЯкщо значення параметра відсутнє — замість нього підставляється порожній рядок",
+        "summary": "Дані гарантійного листа (JSON/XML) (застарілий)",
+        "description": "**ЗАСТАРІЛИЙ МЕТОД** - використовуйте `/api/v2/order/data/for/guarantee/letter` замість цього.\n\nПриклад гарантійного листа: <br/>\n\n```xml\n<?xml version=\"1.0\"?>\n<guarantee>\n  <header>\n     <request_id>\"180702CM023453\"</request_id>\n     <answer_datetime>2018-07-02T12:05:10</answer_datetime>\n     <from_organization>\"Монобанк\"</from_organization>\n     <organization_id>\"11111111\"</organization_id>\n  </header>\n  <expansion>\n    <customer>\n      <last_name>\"Іванов\"</last_name>\n      <first_name>\"Василій\"</first_name>\n      <middle_name>\"Ігорович\"</middle_name>\n      <doc_type>\"0\"</doc_type>\n      <doc_series>\"АК\"</doc_series>\n      <doc_number>\"548967\"</doc_number>\n      <doc_issued>\"Дніпровським РВ ДМУ УМВС у Дніпропетровській\n                  області\"</doc_issued>\n      <doc_date_of_issue>\"2000-05-12\"</doc_date_of_issue>\n      <inn>\"1234567890\"</inn>\n    </customer>\n    <invoice>\n       <invoice_number>\"СФGIT-0000000134\"</invoice_number>\n       <invoice_date>\"2018-07-02\"</invoice_date>\n       <invoice_amount>\"3500.00\"</invoice_amount>\n    </invoice>\n    <payment_destination>\n       <dest_id>\"36962487\"</dest_id>\n       <dest_name>\"ТОВ \\\"Рога и копыта\\\"\"</dest_name>\n       <dest_mfo>\"305299\"</dest_mfo>\n       <dest_bank_name>\"\\\"IBOX\\\"\"</dest_bank_name>\n       <dest_acc_number>\"26000000000\"</dest_acc_number>\n    </payment_destination>\n    <bank>\n       <agreement>\"КД-0001\"</agreement>\n       <agreement_date>\"20.07.2018\"</agreement_date>\n       <credit_amount>\"3500.00\"</credit_amount>\n       <product_types>\"БР\"</product_types>\n       <available_parts_count>\"7\"</available_parts_count>\n       <customer_pay_amount>\"0.00\"</customer_pay_amount>\n       <bank_id>\"21133352\"</bank_id>\n       <bank_name>\"ПАТ \\\"УНІВЕРСАЛ БАНК\\\"\"</bank_name>\n       <bank_executive>\"Петренко І.В.\"</bank_executive>\n     </bank>\n     <sign>12E0F76458C6D1E4</sign>\n     <stamp>1199A0F5E7C4A212</stamp>\n   </expansion>\n</guarantee>\n```\n\n\nЕлектронний цифровий підпис накладається на рядок, що складається шляхом конкатенації значень таких атрибутів відповіді:<br/>\n`\"customer\".\"last_name\"`<br/>\n`\"customer\".\"first_name\"`<br/>\n`\"customer\".\"middle_name\"`<br/>\n`\"customer\".\"doc_series\"`<br/>\n`\"customer\".\"doc_number\"`<br/>\n`\"customer\".\"doc_issued\"`<br/>\n`\"customer\".\"doc_date_of_issue\"`<br/>\n`\"customer\".\"inn\"`<br/>\n`\"invoice\".\"invoice_number\"`<br/>\n`\"invoice\".\"invoice_date\"`<br/>\n`\"invoice\".\"invoice_amount\"`<br/>\n`\"payment_destination\".\"dest_id\"`<br/>\n`\"payment_destination\".\"dest_name\"`<br/>\n`\"payment_destination\".\"dest_mfo\"`<br/>\n`\"payment_destination\".\"dest_bank_name\"`<br/>\n`\"payment_destination\".\"dest_acc_number\"`<br/>\n`\"header\".\"answer_datetime\"`<br/>\n`\"bank\".\"agreement\"`<br/>\n`\"bank\".\"agreement_date\"`<br/>\n`\"bank\".\"credit_amount\"`<br/>\n`\"bank\".\"customer_pay_amount\"`<br/>\n`\"bank\".\"bank_id\"`<br/>\n`\"bank\".\"bank_name\"`<br/>\n`\"bank\".\"bank_executive\"`<br/>\n\nЗначення атрибутів мають бути перераховані саме у зазначеному порядку, без пробілів чи інших роздільників.\nЯкщо значення параметра відсутнє — замість нього підставляється порожній рядок",
         "operationId": "getOrderData",
         "requestBody": {
           "content": {
@@ -454,12 +454,12 @@
             "content": {
               "application/xml": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderData"
+                  "$ref": "#/components/schemas/OrderDataHeader"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderData"
+                  "$ref": "#/components/schemas/OrderDataHeader"
                 }
               }
             }
@@ -495,16 +495,17 @@
             }
           }
         },
+        "deprecated": true,
         "x-order": "1"
       }
     },
     "/api/v2/order/data/for/guarantee/letter": {
       "post": {
         "tags": [
-          "Гарантійні листи"
+          "Сервіси/Гарантійні листи"
         ],
-        "summary": "Дані гарантійного листа (JSON/XML) (версія 2)",
-        "description": "Приклад гарантійного листа: <br/>\n\n```xml\n<?xml version=\"1.0\"?>\n<guarantee>\n  <header>\n     <request_id>\"180702CM023453\"</request_id>\n     <answer_datetime>2018-07-02T12:05:10</answer_datetime>\n     <from_organization>\"Монобанк\"</from_organization>\n     <organization_id>\"11111111\"</organization_id>\n  </header>\n  <expansion>\n    <customer>\n      <last_name>\"Іванов\"</last_name>\n      <first_name>\"Василій\"</first_name>\n      <middle_name>\"Ігорович\"</middle_name>\n      <doc_type>\"0\"</doc_type>\n      <doc_series>\"АК\"</doc_series>\n      <doc_number>\"548967\"</doc_number>\n      <doc_issued>\"Дніпровським РВ ДМУ УМВС у Дніпропетровській\n                  області\"</doc_issued>\n      <doc_date_of_issue>\"2000-05-12\"</doc_date_of_issue>\n      <inn>\"1234567890\"</inn>\n    </customer>\n    <invoice>\n       <invoice_number>\"СФGIT-0000000134\"</invoice_number>\n       <invoice_date>\"2018-07-02\"</invoice_date>\n       <invoice_amount>\"3500.00\"</invoice_amount>\n    </invoice>\n    <payment_destination>\n       <dest_id>\"36962487\"</dest_id>\n       <dest_name>\"ТОВ \\\"Рога и копыта\\\"\"</dest_name>\n       <dest_mfo>\"305299\"</dest_mfo>\n       <dest_bank_name>\"\\\"IBOX\\\"\"</dest_bank_name>\n       <dest_acc_number>\"26000000000\"</dest_acc_number>\n    </payment_destination>\n    <bank>\n       <agreement>\"КД-0001\"</agreement>\n       <agreement_date>\"20.07.2018\"</agreement_date>\n       <credit_amount>\"3500.00\"</credit_amount>\n       <product_types>\"БР\"</product_types>\n       <available_parts_count>\"7\"</available_parts_count>\n       <customer_pay_amount>\"0.00\"</customer_pay_amount>\n       <bank_id>\"21133352\"</bank_id>\n       <bank_name>\"ПАТ \\\"УНІВЕРСАЛ БАНК\\\"\"</bank_name>\n       <bank_executive>\"Петренко І.В.\"</bank_executive>\n     </bank>\n     <sign>12E0F76458C6D1E4</sign>\n     <stamp>1199A0F5E7C4A212</stamp>\n   </expansion>\n</guarantee>\n```\n\n\nЕлектронний цифровий підпис накладається на рядок, який складається шляхом конкатенації значень наступних атрибутів відповіді:<br/>\n`\"customer\".\"last_name\"`<br/>\n`\"customer\".\"first_name\"`<br/>\n`\"customer\".\"middle_name\"`<br/>\n`\"customer\".\"doc_series\"`<br/>\n`\"customer\".\"doc_number\"`<br/>\n`\"customer\".\"doc_issued\"`<br/>\n`\"customer\".\"doc_date_of_issue\"`<br/>\n`\"customer\".\"inn\"`<br/>\n`\"invoice\".\"invoice_number\"`<br/>\n`\"invoice\".\"invoice_date\"`<br/>\n`\"invoice\".\"invoice_amount\"`<br/>\n`\"payment_destination\".\"dest_id\"`<br/>\n`\"payment_destination\".\"dest_name\"`<br/>\n`\"payment_destination\".\"dest_mfo\"`<br/>\n`\"payment_destination\".\"dest_bank_name\"`<br/>\n`\"payment_destination\".\"dest_acc_number\"`<br/>\n`\"header\".\"answer_datetime\"`<br/>\n`\"bank\".\"agreement\"`<br/>\n`\"bank\".\"agreement_date\"`<br/>\n`\"bank\".\"credit_amount\"`<br/>\n`\"bank\".\"customer_pay_amount\"`<br/>\n`\"bank\".\"bank_id\"`<br/>\n`\"bank\".\"bank_name\"`<br/>\n`\"bank\".\"bank_executive\"`<br/>\n\nЗначення атрибутів мають бути перераховані саме у зазначеному порядку, без пробілів чи інших роздільників.\nЯкщо значення параметра відсутнє – замість нього підставляється порожній рядок",
+        "summary": "Дані гарантійного листа (JSON/XML)",
+        "description": "Приклад гарантійного листа: <br/>\n\n```xml\n<?xml version=\"1.0\"?>\n<guarantee>\n  <header>\n     <request_id>\"180702CM023453\"</request_id>\n     <answer_datetime>2018-07-02T12:05:10</answer_datetime>\n     <from_organization>\"Монобанк\"</from_organization>\n     <organization_id>\"11111111\"</organization_id>\n     <contract_number>HFIOEWDD</contract_number>\n     <contract_date>2018-07-02</contract_date>\n  </header>\n  <expansion>\n    <customer>\n      <last_name>\"Іванов\"</last_name>\n      <first_name>\"Василій\"</first_name>\n      <middle_name>\"Ігорович\"</middle_name>\n      <doc_type>\"0\"</doc_type>\n      <doc_series>\"АК\"</doc_series>\n      <doc_number>\"548967\"</doc_number>\n      <doc_issued>\"Дніпровським РВ ДМУ УМВС у Дніпропетровській\n                  області\"</doc_issued>\n      <doc_date_of_issue>\"2000-05-12\"</doc_date_of_issue>\n      <inn>\"1234567890\"</inn>\n    </customer>\n    <invoice>\n       <invoice_number>\"СФGIT-0000000134\"</invoice_number>\n       <invoice_date>\"2018-07-02\"</invoice_date>\n       <invoice_amount>\"3500.00\"</invoice_amount>\n    </invoice>\n    <payment_destination>\n       <dest_id>\"36962487\"</dest_id>\n       <dest_name>\"ТОВ \\\"Рога и копыта\\\"\"</dest_name>\n       <dest_mfo>\"305299\"</dest_mfo>\n       <dest_bank_name>\"\\\"IBOX\\\"\"</dest_bank_name>\n       <dest_acc_number>\"26000000000\"</dest_acc_number>\n    </payment_destination>\n    <bank>\n       <agreement>\"КД-0001\"</agreement>\n       <agreement_date>\"20.07.2018\"</agreement_date>\n       <credit_amount>\"3500.00\"</credit_amount>\n       <product_types>\"БР\"</product_types>\n       <available_parts_count>\"7\"</available_parts_count>\n       <customer_pay_amount>\"0.00\"</customer_pay_amount>\n       <bank_id>\"21133352\"</bank_id>\n       <bank_name>\"ПАТ \\\"УНІВЕРСАЛ БАНК\\\"\"</bank_name>\n       <bank_executive>\"Петренко І.В.\"</bank_executive>\n     </bank>\n     <sign>12E0F76458C6D1E4</sign>\n     <stamp>1199A0F5E7C4A212</stamp>\n   </expansion>\n</guarantee>\n```\n\n\nЕлектронний цифровий підпис накладається на рядок, який складається шляхом конкатенації значень наступних атрибутів відповіді:<br/>\n`\"customer\".\"last_name\"`<br/>\n`\"customer\".\"first_name\"`<br/>\n`\"customer\".\"middle_name\"`<br/>\n`\"customer\".\"doc_series\"`<br/>\n`\"customer\".\"doc_number\"`<br/>\n`\"customer\".\"doc_issued\"`<br/>\n`\"customer\".\"doc_date_of_issue\"`<br/>\n`\"customer\".\"inn\"`<br/>\n`\"invoice\".\"invoice_number\"`<br/>\n`\"invoice\".\"invoice_date\"`<br/>\n`\"invoice\".\"invoice_amount\"`<br/>\n`\"payment_destination\".\"dest_id\"`<br/>\n`\"payment_destination\".\"dest_name\"`<br/>\n`\"payment_destination\".\"dest_mfo\"`<br/>\n`\"payment_destination\".\"dest_bank_name\"`<br/>\n`\"payment_destination\".\"dest_acc_number\"`<br/>\n`\"header\".\"answer_datetime\"`<br/>\n`\"bank\".\"agreement\"`<br/>\n`\"bank\".\"agreement_date\"`<br/>\n`\"bank\".\"credit_amount\"`<br/>\n`\"bank\".\"customer_pay_amount\"`<br/>\n`\"bank\".\"bank_id\"`<br/>\n`\"bank\".\"bank_name\"`<br/>\n`\"bank\".\"bank_executive\"`<br/>\n\nЗначення атрибутів мають бути перераховані саме у зазначеному порядку, без пробілів чи інших роздільників.\nЯкщо значення параметра відсутнє – замість нього підставляється порожній рядок",
         "operationId": "getOrderData_v2",
         "requestBody": {
           "content": {
@@ -527,12 +528,12 @@
             "content": {
               "application/xml": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderData"
+                  "$ref": "#/components/schemas/OrderDataHeaderV2"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderData"
+                  "$ref": "#/components/schemas/OrderDataHeaderV2"
                 }
               }
             }
@@ -574,7 +575,7 @@
     "/api/order/confirm": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Підтвердження видачі товару",
         "description": "Підтверджує, що товар успішно переданий клієнту і активує ПЧ.\n\n**Коли використовувати:**\n- Тільки після отримання дочірнього статусу `WAITING_FOR_STORE_CONFIRM`\n- Після фактичної передачі товару клієнту\n- Обов'язково для активації ПЧ\n\n**Результат:**\n- Статус заявки змінюється на `SUCCESS/ACTIVE`\n- З клієнта списується перший платіж\n",
@@ -647,7 +648,7 @@
     "/api/order/reject": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Скасування заявки",
         "description": "Скасовує заявку з ініціативи магазину (товар не передається клієнту).\n\n**Коли використовувати:**\n- Товар відсутній на складі\n- Технічні проблеми з обробкою замовлення\n- Інші причини, що унеможливлюють продаж\n\n**Результат:**\n- Статус заявки змінюється на `FAIL/REJECTED_BY_STORE`\n- Кредитний договір анулюється\n- Клієнт отримує повідомлення про скасування\n- Ліміт клієнта відновлюється\n",
@@ -720,7 +721,7 @@
     "/api/order/return": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Повернення товару",
         "description": "Оформлює повне або часткове повернення товару за активною заявкою.\n\n**Умови повернення:**\n- Заявка повинна мати статус `SUCCESS`\n- Сума повернення не може перевищувати залишок заборгованості\n- Можливі множинні часткові повернення\n\n**Процес:**\n1. Вказуєте суму повернення в запиті\n2. Система перераховує залишок суми по ПЧ\n3. Клієнт миттєво отримує повернення на картку\n4. При повному поверненні статус змінюється на `SUCCESS/RETURNED`\n\n**Важливо:** При ПОВНОМУ поверненні в параметр `sum` необхідно передати ВСЮ суму за товар.\n",
@@ -793,7 +794,7 @@
     "/api/order/info": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Інформація про заявку (застарілий)",
         "description": "**ЗАСТАРІЛИЙ МЕТОД** - використовуйте `/api/order/data` замість цього.\n\nПовертає базову інформацію про заявку без деталей про повернення.\nНовий метод `/api/order/data` надає повну інформацію включно з історією повернень.\n",
@@ -867,7 +868,7 @@
     "/api/order/data": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Детальна інформація про заявку",
         "description": "Отримує повну інформацію про заявку включно з історією повернень.\n\n**Що повертає:**\n- Базові дані заявки (сума, статус, дати)\n- Інформацію про клієнта\n- Деталі ПЧ (кількість платежів, суми)\n- Повну історію повернень з датами та сумами\n- Поточний залишок заборгованості\n\n**Використання:**\n- Для звірки операцій\n- Для відображення статусу в особистому кабінеті\n- Для аналітики та звітності\n- Для обробки повернень\n",
@@ -940,7 +941,7 @@
     "/api/order/check/paid": {
       "post": {
         "tags": [
-          "Заявки на ПЧ"
+          "Сервіси/Заявки на ПЧ"
         ],
         "summary": "Перевірка статусу оплати",
         "description": "Перевіряє, чи повністю погашена ПЧ клієнтом.\n\n**Повертає:**\n- `true` - якщо всі платежі сплачені (статус `SUCCESS/DONE`)\n- `false` - якщо є заборгованість або активні платежі\n\n**Використання:**\n- Для перевірки завершення ПЧ\n- Для звітності про закриті заявки\n- Для аналітики погашення\n\n**Примітка:** Метод працює тільки для заявок зі статусом `SUCCESS`\n",
@@ -1013,7 +1014,7 @@
     "/api/store/report": {
       "post": {
         "tags": [
-          "Звітність"
+          "Сервіси/Звітність"
         ],
         "summary": "Денний звіт операцій",
         "description": "Отримання звіту про всі операції за вказану дату",
@@ -1164,7 +1165,7 @@
           },
           "bank_id": {
             "type": "string",
-            "description": "ОКПО банку, що видає кредит",
+            "description": "ЄДРПОУ банку, що видає кредит",
             "example": "12345678"
           },
           "bank_name": {
@@ -1266,7 +1267,7 @@
         },
         "description": "Детальна інформація гарантійного листа"
       },
-      "Header": {
+      "HeaderV2": {
         "type": "object",
         "properties": {
           "request_id": {
@@ -1287,17 +1288,17 @@
           },
           "organization_id": {
             "type": "string",
-            "description": "Код ОКПО банку-кредитора",
+            "description": "Код ЄДРПОУ банку-кредитора",
             "example": "21133352"
           },
           "contract_number": {
             "type": "string",
-            "description": "Номер договору між банком та магазином\nВластивість доступна у версії сервісу /api/v2/order/data/for/guarantee/letter",
+            "description": "Номер договору між банком та магазином",
             "example": "12345678"
           },
           "contract_date": {
             "type": "string",
-            "description": "Дата договору між банком та магазином\nВластивість доступна у версії сервісу /api/v2/order/data/for/guarantee/letter",
+            "description": "Дата договору між банком та магазином",
             "format": "date",
             "example": "2018-01-25"
           }
@@ -1391,11 +1392,11 @@
         },
         "description": "Інформація про рахунок-фактуру"
       },
-      "OrderData": {
+      "OrderDataHeaderV2": {
         "type": "object",
         "properties": {
           "header": {
-            "$ref": "#/components/schemas/Header"
+            "$ref": "#/components/schemas/HeaderV2"
           },
           "expansion": {
             "$ref": "#/components/schemas/Expansion"
@@ -1436,7 +1437,7 @@
         "properties": {
           "dest_id": {
             "type": "string",
-            "description": "ОКПО компанії, на рахунок якої будуть зараховані кошти",
+            "description": "ЄДРПОУ компанії, на рахунок якої будуть зараховані кошти",
             "example": "12345678"
           },
           "dest_name": {
@@ -1655,7 +1656,7 @@
             "example": "fa4a8249-336e-4e6d-9b85-79bc8be62377"
           },
           "sum": {
-            "minimum": 0.01,
+            "minimum": 1,
             "exclusiveMinimum": false,
             "type": "number",
             "description": "Сума повернення товарів у гривнях",
@@ -1763,6 +1764,47 @@
         },
         "description": "Список повернень за заявкою"
       },
+      "Header": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Унікальний ідентифікатор заявки",
+            "format": "uuid",
+            "example": "fa4a8249-336e-4e6d-9b85-79bc8be62377"
+          },
+          "answer_datetime": {
+            "type": "string",
+            "description": "Дата та час формування даного гарантійного листа",
+            "format": "date-time"
+          },
+          "from_organization": {
+            "type": "string",
+            "description": "Назва банку-кредитора",
+            "example": "Монобанк"
+          },
+          "organization_id": {
+            "type": "string",
+            "description": "Код ЄДРПОУ банку-кредитора",
+            "example": "21133352"
+          }
+        },
+        "description": "Заголовок гарантійного листа"
+      },
+      "OrderDataHeader": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "expansion": {
+            "$ref": "#/components/schemas/Expansion"
+          }
+        },
+        "xml": {
+          "name": "guarantee"
+        }
+      },
       "CreateAdditionalParams": {
         "type": "object",
         "properties": {
@@ -1848,7 +1890,7 @@
             "example": "+380501234567"
           },
           "total_sum": {
-            "minimum": 1,
+            "minimum": 2,
             "exclusiveMinimum": false,
             "type": "number",
             "description": "Загальна сума замовлення у гривнях",
@@ -1958,7 +2000,7 @@
             "maxItems": 2147483647,
             "minItems": 1,
             "type": "array",
-            "description": "Доступні варіанти кількості частин для ПЧ",
+            "description": "Доступні варіанти кількості платежів",
             "example": [
               3,
               6,
@@ -1968,7 +2010,7 @@
               "maximum": 25,
               "minimum": 3,
               "type": "integer",
-              "description": "Доступні варіанти кількості частин для ПЧ",
+              "description": "Доступні варіанти кількості платежів",
               "format": "int32"
             }
           }
@@ -2055,5 +2097,6 @@
         "in": "header"
       }
     }
-  }
+  },
+  "subtitle": "API підключення та налаштування Покупки Частинами для вашого бізнесу"
 }
