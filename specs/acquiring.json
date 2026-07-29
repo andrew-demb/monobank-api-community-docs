@@ -8,7 +8,7 @@
   "info": {
     "title": "Acquiring",
     "version": "v2412",
-    "description": "На кожну зміну статусу рахунку бекенд еквайрингу виконає до 3-х спроб POST запиту, поки у відповідь не отримує http-статус 200 OK. З параметром X-Sign у хідерах. Параметр містить підпис тіла запиту вебхуку по стандарту ECDSA. Приклади верифікації підпису наведено нижче.\n\nAPI може працювати в режимі тестового середовища. Для цього потрібно використовувати токен із https://api.monobank.ua/\n\nДля тестування не потрібно мати термінал або дозвіл для тестування эквайрингу, тестове середовище доступне всім клієнтам банку. В тестовому середовищі для оплати можна використовувати будь-які номер, дату та cvv картки, навіть якщо вони не є дійсними. Єдина умова: номер картки повинен бути валідним за [алгоритмом Луна](https://uk.wikipedia.org/wiki/Алгоритм_Луна). При використанні даних реальної банківської картки, вона буде прийнята, але фінансова авторизація здійснюватись не буде.",
+    "description": "На кожну зміну статусу рахунку бекенд еквайрингу виконає до 3-х спроб POST запиту, поки у відповідь не отримує http-статус 200 OK. З параметром x-sign у хідерах. Параметр містить підпис тіла запиту вебхуку по стандарту ECDSA. Приклади верифікації підпису наведено нижче.\n\nAPI може працювати в режимі тестового середовища. Для цього потрібно використовувати токен із https://api.monobank.ua/\n\nДля тестування не потрібно мати термінал або дозвіл для тестування эквайрингу, тестове середовище доступне всім клієнтам банку. В тестовому середовищі для оплати можна використовувати будь-які номер, дату та cvv картки, навіть якщо вони не є дійсними. Єдина умова: номер картки повинен бути валідним за [алгоритмом Луна](https://uk.wikipedia.org/wiki/Алгоритм_Луна). При використанні даних реальної банківської картки, вона буде прийнята, але фінансова авторизація здійснюватись не буде.",
     "x-logo": {
       "url": "logo.png",
       "altText": "logo"
@@ -1840,85 +1840,6 @@
         }
       }
     },
-    "/api/merchant/employee/list": {
-      "get": {
-        "summary": "Список співробітників\n",
-        "description": "Список співробітників, які можуть отримати чайові. Для додавання співробітників зверніться в службу турботи. Якщо використовується тестовий токен, то повернуться декілька тестових обʼєктів, які можна буде далі використовувати для налаштовування інтеграції\n",
-        "parameters": [
-          {
-            "name": "X-Token",
-            "required": true,
-            "in": "header",
-            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Масив співробітників",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmployeeListResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Один із вхідних параметрів невалідний",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Токен невалідний",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ForbiddenError"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Http-метод невалідний",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MethodNotAllowedError"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Занадто багато запитів",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TooManyRequestsError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Під час виконання запиту виникла непередбачена помилка",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/merchant/split-receiver/list": {
       "get": {
         "summary": "Список отримувачів розщеплених платежів",
@@ -2046,6 +1967,220 @@
           },
           "404": {
             "description": "Пошук за одним із параметрів запиту завершився неуспішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Занадто багато запитів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/t2p/terminal/payment/external/status": {
+      "get": {
+        "summary": "Отримання статусу T2P-платежу за externalPaymentId",
+        "description": "Метод дозволяє інтегратору отримати поточний статус та реквізити T2P-платежу за зовнішнім ідентифікатором (externalPaymentId), який інтегратор передав при створенні платежу в deeplink (параметр - id).\nТіло відповіді ідентичне тілу вебхуку, який банк надсилає на callbackSuccess / callbackFail. Це дозволяє інтегратору не піднімати власний сервер для прийому вебхуків, а періодично опитувати статус самостійно.\nПошук обмежений останніми 90 днями. Рекомендована частота опитування — не частіше ніж 1 раз на 5 секунд для одного externalPaymentId.\n",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен мерчанта, отриманий з https://web.monobank.ua/",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "externalPaymentId",
+            "required": true,
+            "in": "query",
+            "description": "Зовнішній ідентифікатор платежу, який інтегратор передав у полі id запиту POST /api/t2p/mob/terminal/payment/create",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Платіж знайдено, тіло містить актуальні дані",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/T2PPaymentExternalStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Не передано або порожній параметр externalPaymentId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "errCode",
+                    "errText"
+                  ],
+                  "properties": {
+                    "errCode": {
+                      "type": "string",
+                      "example": "BAD_REQUEST"
+                    },
+                    "errText": {
+                      "type": "string",
+                      "example": "empty 'externalPaymentId'"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Платіж із таким externalPaymentId не знайдено в межах останніх 90 днів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "errCode",
+                    "errText"
+                  ],
+                  "properties": {
+                    "errCode": {
+                      "type": "string",
+                      "example": "NOT_FOUND"
+                    },
+                    "errText": {
+                      "type": "string",
+                      "example": "payment not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Http-метод невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodNotAllowedError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Під час виконання запиту виникла непередбачена помилка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchant/pos-transaction-cancel": {
+      "post": {
+        "summary": "Скасування POS-транзакції",
+        "description": "Ініціює повернення коштів для POS-транзакції за RRN оригінальної операції та сумою повернення",
+        "parameters": [
+          {
+            "name": "X-Token",
+            "required": true,
+            "in": "header",
+            "description": "Токен з особистого кабінету https://web.monobank.ua/ або тестовий токен з [https://api.monobank.ua/](https://api.monobank.ua/index.html)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PosTransactionCancelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Повернення ініційовано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PosTransactionCancelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Один із вхідних параметрів невалідний, транзакція належить іншому мерчанту, сума перевищує залишок або баланс мерчанта недостатній",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Токен невалідний",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Транзакцію за вказаним RRN не знайдено",
             "content": {
               "application/json": {
                 "schema": {
@@ -2552,7 +2687,7 @@
     "/api/merchant/subscription/remove": {
       "post": {
         "summary": "Інвалідація підписки",
-        "description": "Метод для інвалідації регулярної підписки",
+        "description": "Метод для інвалідації регулярної підписки\n\nСервіс використовується для видалення підписки, якщо по ній ще не було виконано оплат.\n",
         "parameters": [
           {
             "name": "X-Token",
@@ -2589,7 +2724,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "$ref": "#/components/schemas/SubscriptionRemoveBadRequestError"
                 }
               }
             }
@@ -3165,6 +3300,12 @@
             "example": 4100,
             "description": "Сума, яку отримає мерчант на свій рахунок після взаєморозрахунку з банком"
           },
+          "agentFee": {
+            "type": "integer",
+            "format": "int64",
+            "example": 500,
+            "description": "Сума агентської комісії, яку отримає агент, якщо при створенні рахунку було вказано `agentFeePercent`"
+          },
           "ccy": {
             "type": "integer",
             "format": "int32",
@@ -3243,6 +3384,43 @@
               }
             }
           },
+          "splitReceiverList": {
+            "type": "array",
+            "description": "Перелік отримувачів розщепленого платежу",
+            "items": {
+              "type": "object",
+              "required": [
+                "splitReceiverId",
+                "amount",
+                "profit"
+              ],
+              "properties": {
+                "splitReceiverId": {
+                  "type": "string",
+                  "description": "Ідентифікатор (референс) отримувача розщепленого платежу",
+                  "example": "sr_aB3dC5eF7g"
+                },
+                "amount": {
+                  "type": "integer",
+                  "format": "int64",
+                  "example": 4200,
+                  "description": "Сума, розщеплена на цього отримувача, у копійках"
+                },
+                "profit": {
+                  "type": "integer",
+                  "format": "int64",
+                  "example": 4100,
+                  "description": "Сума, яку отримає саб-мерчант на свій рахунок після взаєморозрахунку з банком"
+                },
+                "agentFee": {
+                  "type": "integer",
+                  "format": "int64",
+                  "example": 500,
+                  "description": "Сума агентської комісії за розщепленою частиною, якщо при створенні рахунку було вказано `agentFeePercent`"
+                }
+              }
+            }
+          },
           "metadata": {
             "type": "object",
             "description": "Додаткові дані замовлення, які були вказані при створенні інвойсу",
@@ -3282,12 +3460,12 @@
           },
           "successUrl": {
             "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі успішної оплати.\n\nДля підключення функції, зверніться, будь ласка, в службу турботи monobank. Редірект недоступний за замовчуванням.",
             "example": "https://example.com/your/website/success/page"
           },
           "failUrl": {
             "type": "string",
-            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати",
+            "description": "Адреса для повернення (GET) - на цю адресу буде переадресовано користувача у разі неуспішної оплати.\n\nДля підключення функції, зверніться, будь ласка, в службу турботи monobank. Редірект недоступний за замовчуванням.",
             "example": "https://example.com/your/website/fail/page"
           },
           "webHookUrl": {
@@ -3303,10 +3481,11 @@
           },
           "paymentType": {
             "type": "string",
-            "description": "Тип операції. Для значення `hold` термін складає 9 днів. Якщо через 9 днів холд не буде фіналізовано — він скасовується",
+            "description": "Тип операції. Для значення `hold` термін складає 9 днів. Якщо через 9 днів холд не буде фіналізовано — він скасовується.\n\n\nДля значення `verification` обов'язково передавати `saveCardData.saveCard: true`. Сума `amount` має бути `0` — у цьому випадку проводиться верифікація картки без фактичного списання коштів.\n",
             "enum": [
               "debit",
-              "hold"
+              "hold",
+              "verification"
             ],
             "default": "debit"
           },
@@ -3344,16 +3523,17 @@
             "example": 1.42,
             "description": "Відсоток комісії, який агент встановлює для себе"
           },
-          "tipsEmployeeId": {
-            "type": "string",
-            "description": "Ідентифікатор співробітника, який може отримати чайові після оплати; ідентифікатор можна взяти з апі \"Список співробітників\""
-          },
           "displayType": {
             "type": "string",
             "description": "Отримання клієнтом посилання iframe для відображення віджета (якщо параметр не передано, то звичайне посилання)",
             "enum": [
               "iframe"
             ]
+          },
+          "withAppUrl": {
+            "type": "boolean",
+            "description": "Якщо передати `true`, у відповіді буде повернуто поле `appUrl` — диплінк `monobank://...` для відкриття застосунку monobank на екрані підтвердження платежу. Не підтримується для QR-платежів та верифікаційних платежів.\n",
+            "example": true
           }
         }
       },
@@ -3578,6 +3758,11 @@
             "type": "string",
             "example": "https://pay.mbnk.biz/p2_9ZgpZVsl3",
             "description": "Посилання на сторінку оплати"
+          },
+          "appUrl": {
+            "type": "string",
+            "example": "monobank://pay/p2_9ZgpZVsl3",
+            "description": "Диплінк для відкриття застосунку monobank на екрані підтвердження платежу. Повертається лише якщо у запиті було передано `withAppUrl: true`.\n"
           }
         }
       },
@@ -3865,24 +4050,6 @@
                 "description": "Статус токенізації картки:\n\n  `new` - прийнято заявку на токенізацію\n\n  `created` - картку успішно токенізовано\n\n  `failed` - картку не вдалось токенізувати\n"
               }
             }
-          },
-          "tipsInfo": {
-            "type": "object",
-            "description": "Дані оплати чайових; обʼєкт присутній якщо було вказано `tipsEmployeeId` при створенні рахунку. Якщо поле `amount` відсутнє, значить успішної оплати чайових не було",
-            "required": [
-              "employeeId"
-            ],
-            "properties": {
-              "employeeId": {
-                "type": "string",
-                "description": "Ідентифікатор співробітника, якому можна виплатити чайові"
-              },
-              "amount": {
-                "type": "integer",
-                "description": "Сума успішно сплачених чайових у мінімальних одиницях валюти. Якщо це поле відсутнє, значить успішної оплати чайових не було",
-                "example": 4200
-              }
-            }
           }
         }
       },
@@ -4069,7 +4236,8 @@
       "InvoiceFinalizeRequest": {
         "type": "object",
         "required": [
-          "invoiceId"
+          "invoiceId",
+          "amount"
         ],
         "properties": {
           "invoiceId": {
@@ -4103,6 +4271,7 @@
             "enum": [
               "success"
             ],
+            "example": "success",
             "description": "Статус заяви:\n\n  `success` - заяву на фіналізацію прийнято\n"
           }
         }
@@ -4689,40 +4858,6 @@
       "InvoiceSyncPaymentResponse": {
         "$ref": "#/components/schemas/InvoiceStatusResponse"
       },
-      "EmployeeListResponse": {
-        "type": "object",
-        "properties": {
-          "list": {
-            "type": "array",
-            "description": "Список співробітників, які можуть отримати чайові",
-            "items": {
-              "type": "object",
-              "required": [
-                "id",
-                "name",
-                "extRef"
-              ],
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "description": "Ідентифікатор співробітника в системі еквайрингу",
-                  "example": "3QFX7e7mZfo3R"
-                },
-                "name": {
-                  "type": "string",
-                  "description": "Ім'я співробітника, вказане мерчантом при додаванні співробітників через службу турботи",
-                  "example": "Артур Дент"
-                },
-                "extRef": {
-                  "type": "string",
-                  "description": "Ідентифікатор співробітника в системі мерчанта",
-                  "example": "abra_kadabra"
-                }
-              }
-            }
-          }
-        }
-      },
       "ForbiddenError": {
         "type": "object",
         "required": [
@@ -4813,7 +4948,7 @@
               "required": [
                 "splitReceiverId",
                 "name",
-                "okpo"
+                "edrpou"
               ],
               "properties": {
                 "splitReceiverId": {
@@ -4821,9 +4956,9 @@
                   "description": "Ідентифікатор (референс) саб-мерчанта для виплати за товар",
                   "example": "sr_aB3dC5eF7g"
                 },
-                "okpo": {
+                "edrpou": {
                   "type": "string",
-                  "description": "ІПН Продавця",
+                  "description": "ЄДРПОУ Продавця",
                   "example": "1234567890"
                 },
                 "name": {
@@ -4882,6 +5017,108 @@
               "terminal": "MT000001"
             }
           ]
+        }
+      },
+      "T2PPaymentExternalStatusResponse": {
+        "type": "object",
+        "properties": {
+          "bank": {
+            "type": "string",
+            "description": "Назва банку-еквайра",
+            "example": "АТ Універсал Банк"
+          },
+          "terminal": {
+            "type": "string",
+            "description": "Код термінала",
+            "example": "MT507582"
+          },
+          "paymentType": {
+            "type": "string",
+            "description": "Тип операції",
+            "enum": [
+              "purchase",
+              "refund",
+              "reverse"
+            ],
+            "example": "purchase"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Сума у мінорних одиницях (копійках). 3500 = 35,00 грн",
+            "example": 3500
+          },
+          "ccy": {
+            "type": "string",
+            "description": "Валюта. На цей момент завжди \"UAH\"",
+            "example": "UAH"
+          },
+          "status": {
+            "type": "string",
+            "description": "Статус платежу",
+            "enum": [
+              "pending",
+              "success",
+              "rejected",
+              "txp_does_not_answer",
+              "transaction_not_completed"
+            ],
+            "example": "success"
+          },
+          "dataTime": {
+            "type": "string",
+            "description": "Час створення платежу у форматі YYYY-MM-DD HH:MM:SS (UTC)",
+            "example": "2026-04-21 23:01:54"
+          },
+          "internalPaymentId": {
+            "type": "string",
+            "description": "Внутрішній ідентифікатор платежу в системі банку",
+            "example": "f2224275-ba0a-4f58-b6f7-bd00df63b01c"
+          },
+          "externalPaymentId": {
+            "type": "string",
+            "description": "Зовнішній ідентифікатор (той самий, що в запиті)",
+            "example": "18247112-4eac-4465-aa3c-c42c18f601eb"
+          },
+          "transactionId": {
+            "type": "string",
+            "description": "ID транзакції в системі банку. Наповнюється після виписки",
+            "example": "23417832268"
+          },
+          "maskedPan": {
+            "type": "string",
+            "description": "Маскований номер картки",
+            "example": "44179274******76"
+          },
+          "cardMask": {
+            "type": "string",
+            "description": "Платіжна система картки: visa | mastercard | …",
+            "example": "visa"
+          },
+          "approvalCode": {
+            "type": "string",
+            "description": "Код авторизації",
+            "example": "125261"
+          },
+          "rrn": {
+            "type": "string",
+            "description": "RRN транзакції",
+            "example": "448571901425"
+          },
+          "responseCode": {
+            "type": "string",
+            "description": "Код відповіді процесингу",
+            "example": "1"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Текст помилки, якщо status — rejected / *_not_completed"
+          },
+          "countryCard": {
+            "type": "string",
+            "description": "ISO-код країни емітента картки",
+            "example": "804"
+          }
         }
       },
       "SubscriptionCreateRequest": {
@@ -5467,6 +5704,25 @@
           }
         }
       },
+      "SubscriptionRemoveBadRequestError": {
+        "type": "object",
+        "required": [
+          "errCode",
+          "errText"
+        ],
+        "properties": {
+          "errCode": {
+            "type": "string",
+            "example": "BAD_REQUEST",
+            "description": "Код помилки, за яким можна розрізняти види клієнтських помилок:\n\n  `BAD_REQUEST` - запит некоректний, потрібно виправити параметри запиту та спробувати ще раз;\n\n  `1001` - помилка повертається у випадку, якщо для переданого subscriptionId вже було виконано оплату;\n\n  `INVALID_MERCHANT_PAYM_INFO` - некоректне значення в обʼєкті `merchantPaymInfo`; при створенні рахунку, оплатах за токеном та оплаті за реквізитами;\n\n  `ORDER_IN_PROGRESS` - сума, встановлена на qr-касу вже в процесі оплати, тому при спробі видалити суму оплати буде помилка;\n\n  `HOLD_INVOICE_NOT_FINALIZED` - рахунок створено з `paymentType=hold`, сплачено, але ще не фіналізовано; повертається при спробі отримати розширену інформацію про успішну оплату;\n\n  `WRONG_CANCEL_AMOUNT` - при спробі скасування оплати було вказано невірну суму або цю оплату вже було скасовано;\n\n  `TOKEN_NOT_FOUND` - токен картки, який було вказано в запиті, не знайдено;\n"
+          },
+          "errText": {
+            "type": "string",
+            "example": "empty 'subscriptionId'",
+            "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
+          }
+        }
+      },
       "MethodNotAllowedError": {
         "type": "object",
         "required": [
@@ -5523,17 +5779,55 @@
             "description": "Опис помилки; має виключно інформативну функцію, використовувати його в бізнес-логіці не варто"
           }
         }
+      },
+      "PosTransactionCancelRequest": {
+        "type": "object",
+        "required": [
+          "rrn",
+          "amount"
+        ],
+        "properties": {
+          "rrn": {
+            "type": "string",
+            "example": "060189181768",
+            "description": "RRN (Reference Retrieval Number) оригінальної POS-транзакції"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "example": 4200,
+            "description": "Сума повернення у мінімальних одиницях, не більша за залишок після попередніх повернень"
+          }
+        }
+      },
+      "PosTransactionCancelResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Статус ініціювання повернення"
+          },
+          "tranId": {
+            "type": "string",
+            "example": "acq123456789",
+            "description": "Ідентифікатор транзакції повернення"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Приклади верифікації підпису webhook",
-      "description": "<details>\n  <summary>Go</summary>\n\n  ```go\n\n  package main\n\n  import (\n    \"crypto/ecdsa\"\n    \"crypto/sha256\"\n    \"crypto/x509\"\n    \"encoding/base64\"\n    \"encoding/pem\"\n    \"log\"\n  )\n\n  var (\n    // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n    pubKeyBase64 = `LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==`\n\n    // value from X-Sign header in webhook request\n    xSignBase64 = `MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=`\n\n    // webhook request body bytes\n    bodyBytes = []byte(`{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }`)\n  )\n\n  func main() {\n    pubKeyBytes, err := base64.StdEncoding.DecodeString(pubKeyBase64)\n    if err != nil {\n        panic(err)\n\n    }\n\n    signatureBytes, err := base64.StdEncoding.DecodeString(xSignBase64)\n    if err != nil {\n        panic(err)\n    }\n\n    block, _ := pem.Decode(pubKeyBytes)\n    if block == nil {\n        panic(\"invalid pem\")\n    }\n\n    genericPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)\n    if err != nil {\n        panic(err)\n    }\n\n    pubKey, ok := genericPubKey.(*ecdsa.PublicKey)\n    if !ok {\n        panic(\"invalid key\")\n    }\n\n    hash := sha256.Sum256(bodyBytes)\n\n    ok = ecdsa.VerifyASN1(pubKey, hash[:], signatureBytes)\n    if !ok {\n        panic(\"invalid X-Sign\")\n    }\n\n    log.Println(\"OK\")\n  }\n  ```\n</details>\n<details>\n  <summary>Python</summary>\n\n  ```python\n\n  import base64\n  import hashlib\n\n  import ecdsa\n\n  # example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  pub_key_base64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\"\n\n  # value from X-Sign header in webhook request\n  x_sign_base64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\"\n\n  # webhook request body bytes\n  body_bytes = b'''{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }'''\n\n  if __name__ == '__main__':\n      pub_key_bytes = base64.b64decode(pub_key_base64)\n      signature_bytes = base64.b64decode(x_sign_base64)\n      pub_key = ecdsa.VerifyingKey.from_pem(pub_key_bytes.decode())\n\n      ok = pub_key.verify(signature_bytes, body_bytes, sigdecode=ecdsa.util.sigdecode_der, hashfunc=hashlib.sha256)\n      if ok:\n          print(\"OK\")\n      else:\n          print(\"NOT OK\")\n  ```\n</details>\n<details>\n  <summary>Php</summary>\n\n  ```php\n\n  <?php\n\n  // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  $pubKeyBase64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\";\n\n  // value from X-Sign header in webhook request\n  $xSignBase64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\";\n\n  $message = '{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }';\n\n  $signature = base64_decode($xSignBase64);\n  $publicKey = openssl_get_publickey(base64_decode($pubKeyBase64));\n\n  $result = openssl_verify($message, $signature, $publicKey, OPENSSL_ALGO_SHA256);\n\n  echo $result === 1 ? \"OK\" : \"NOT OK\";\n  ```\n</details>\n<details>\n  <summary>NodeJs</summary>\n\n  ```javascript\n\n  const crypto = require('crypto');\n\n  // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  let pubKeyBase64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\";\n\n  // value from X-Sign header in webhook request\n  let xSignBase64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\";\n\n  let message = `{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }`\n\n  let signatureBuf = Buffer.from(xSignBase64, 'base64');\n  let publicKeyBuf = Buffer.from(pubKeyBase64, 'base64');\n\n  let verify = crypto.createVerify('SHA256');\n\n  verify.write(message);\n  verify.end();\n\n  let result = verify.verify(publicKeyBuf, signatureBuf);\n\n  console.log(result === true ? \"OK\" : \"NOT OK\");\n  ```\n</details>\n"
+      "description": "<details>\n  <summary>Go</summary>\n\n  ```go\n\n  package main\n\n  import (\n    \"crypto/ecdsa\"\n    \"crypto/sha256\"\n    \"crypto/x509\"\n    \"encoding/base64\"\n    \"encoding/pem\"\n    \"log\"\n  )\n\n  var (\n    // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n    pubKeyBase64 = `LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==`\n\n    // value from x-sign header in webhook request\n    xSignBase64 = `MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=`\n\n    // webhook request body bytes\n    bodyBytes = []byte(`{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }`)\n  )\n\n  func main() {\n    pubKeyBytes, err := base64.StdEncoding.DecodeString(pubKeyBase64)\n    if err != nil {\n        panic(err)\n\n    }\n\n    signatureBytes, err := base64.StdEncoding.DecodeString(xSignBase64)\n    if err != nil {\n        panic(err)\n    }\n\n    block, _ := pem.Decode(pubKeyBytes)\n    if block == nil {\n        panic(\"invalid pem\")\n    }\n\n    genericPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)\n    if err != nil {\n        panic(err)\n    }\n\n    pubKey, ok := genericPubKey.(*ecdsa.PublicKey)\n    if !ok {\n        panic(\"invalid key\")\n    }\n\n    hash := sha256.Sum256(bodyBytes)\n\n    ok = ecdsa.VerifyASN1(pubKey, hash[:], signatureBytes)\n    if !ok {\n        panic(\"invalid x-sign\")\n    }\n\n    log.Println(\"OK\")\n  }\n  ```\n</details>\n<details>\n  <summary>Python</summary>\n\n  ```python\n\n  import base64\n  import hashlib\n\n  import ecdsa\n\n  # example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  pub_key_base64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\"\n\n  # value from x-sign header in webhook request\n  x_sign_base64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\"\n\n  # webhook request body bytes\n  body_bytes = b'''{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }'''\n\n  if __name__ == '__main__':\n      pub_key_bytes = base64.b64decode(pub_key_base64)\n      signature_bytes = base64.b64decode(x_sign_base64)\n      pub_key = ecdsa.VerifyingKey.from_pem(pub_key_bytes.decode())\n\n      ok = pub_key.verify(signature_bytes, body_bytes, sigdecode=ecdsa.util.sigdecode_der, hashfunc=hashlib.sha256)\n      if ok:\n          print(\"OK\")\n      else:\n          print(\"NOT OK\")\n  ```\n</details>\n<details>\n  <summary>Php</summary>\n\n  ```php\n\n  <?php\n\n  // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  $pubKeyBase64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\";\n\n  // value from x-sign header in webhook request\n  $xSignBase64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\";\n\n  $message = '{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }';\n\n  $signature = base64_decode($xSignBase64);\n  $publicKey = openssl_get_publickey(base64_decode($pubKeyBase64));\n\n  $result = openssl_verify($message, $signature, $publicKey, OPENSSL_ALGO_SHA256);\n\n  echo $result === 1 ? \"OK\" : \"NOT OK\";\n  ```\n</details>\n<details>\n  <summary>NodeJs</summary>\n\n  ```javascript\n\n  const crypto = require('crypto');\n\n  // example pubkey, you should receive one at https://api.monobank.ua/api/merchant/pubkey\n  let pubKeyBase64 = \"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFQUc1LzZ3NnZubGJZb0ZmRHlYWE4vS29CbVVjTgo3NWJSUWg4MFBhaEdldnJoanFCQnI3OXNSS0JSbnpHODFUZVQ5OEFOakU1c0R3RmZ5Znhub0ZJcmZBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\";\n\n  // value from x-sign header in webhook request\n  let xSignBase64 = \"MEUCIQC/mVKhi8FKoayul2Mim3E2oaIOCNJk5dEXxTqbkeJSOQIgOM0hsW0qcP2H8iXy1aQYpmY0SJWEaWur7nQXlKDCFxA=\";\n\n  let message = `{\n    \"invoiceId\": \"p2_9ZgpZVsl3\",\n    \"status\": \"created\",\n    \"failureReason\": \"string\",\n    \"amount\": 4200,\n    \"ccy\": 980,\n    \"finalAmount\": 4200,\n    \"createdDate\": \"2019-08-24T14:15:22Z\",\n    \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n    \"reference\": \"84d0070ee4e44667b31371d8f8813947\",\n    \"cancelList\": [\n      {\n        \"status\": \"processing\",\n        \"amount\": 4200,\n        \"ccy\": 980,\n        \"createdDate\": \"2019-08-24T14:15:22Z\",\n        \"modifiedDate\": \"2019-08-24T14:15:22Z\",\n        \"approvalCode\": \"662476\",\n        \"rrn\": \"060189181768\",\n        \"extRef\": \"635ace02599849e981b2cd7a65f417fe\"\n      }\n    ]\n  }`\n\n  let signatureBuf = Buffer.from(xSignBase64, 'base64');\n  let publicKeyBuf = Buffer.from(pubKeyBase64, 'base64');\n\n  let verify = crypto.createVerify('SHA256');\n\n  verify.write(message);\n  verify.end();\n\n  let result = verify.verify(publicKeyBuf, signatureBuf);\n\n  console.log(result === true ? \"OK\" : \"NOT OK\");\n  ```\n</details>\n"
     },
     {
       "name": "Помилки в процесі оплати",
-      "description": "<details>\n  <summary>Помилки в процесі оплати</summary>\n  <table>\n    <tr>\n      <th>errCode з вебхуку або Статусу рахунку</th>\n      <th>Текст помилки</th>\n      <th>Куди звернутися</th>\n    </tr>\n    <tr>\n      <td>6</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>40</td>\n      <td>Карта втрачена. Витрати обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>41</td>\n      <td>Карта втрачена. Витрати обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>50</td>\n      <td>Витрати по карті обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>51</td>\n      <td>У картки, з якої ви намагаєтеся зробити переказ, закінчився строк дії</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>52</td>\n      <td>Номер картки вказано невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>54</td>\n      <td>Стався технічний збій</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>55</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>56</td>\n      <td>Тип карти не підтримує подібні оплати</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>57</td>\n      <td>Транзакція не підтримується</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>58</td>\n      <td>Витрати по карті обмежені на покупку</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>58</td>\n      <td>Витрати по карті обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>59</td>\n      <td>На картці недостатньо коштів для завершення покупки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>60</td>\n      <td>На картці перевищено ліміт кількості видаткових операцій</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>61</td>\n      <td>На картці перевищено інтернет-ліміт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>62</td>\n      <td>Досягнуто або перевищено ліміт на кількість неправильних вводів PIN-коду</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>63</td>\n      <td>На картці перевищено інтернет-ліміт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>67</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>68</td>\n      <td>Відмова в проведені операції з боку МПС</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>71</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>72</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>73</td>\n      <td>Помилка маршрутизації</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>74</td>\n      <td>Помилка налаштувань торгівельної точки. )</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>75</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>80</td>\n      <td>Неправильний CVV код (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>81</td>\n      <td>Неправильний CVV2 код (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>82</td>\n      <td>Транзакція не дозволена з такими умовами проведення</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>82</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>83</td>\n      <td>Перевищені ліміти спроб оплати з карт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>84</td>\n      <td>Неправильне значення перевірочного числа 3D Secure Cardholder Authentication Verification Value</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>98</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1000</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1005</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1010</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1014</td>\n      <td>Для проведення оплати потрібно вказати повні реквізити карти</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>1034</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1035</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1036</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1044</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1045</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1053</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1054</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1056</td>\n      <td>Переказ можливий тільки на картку українського банку</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1064</td>\n      <td>Оплата можлива лише з використанням карток Mastercard або Visa</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1066</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1077</td>\n      <td>Сума оплати менша ніж допустима сума (налаштування МПС)</td>\n      <td>API</td>\n    </tr>\n    <tr>\n      <td>1080</td>\n      <td>Термін дії карти вказаний невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1090</td>\n      <td>Інформація про клієнта не знайдена</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1115</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1121</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1145</td>\n      <td>Мінімальна сума переказу</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1165</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1187</td>\n      <td>Треба вказати імя отримувача </td>\n      <td>API</td>\n    </tr>\n    <tr>\n      <td>1193</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1194</td>\n      <td>Цей спосіб поповнення працює тільки з картами інших банків</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1200</td>\n      <td>Обов'язкова наявність CVV коду (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1405</td>\n      <td>Платіжна система обмежила перекази</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1406</td>\n      <td>Карта заблокована риск-менеджемнтом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1407</td>\n      <td>Операцію заблоковано ризик-менеджментом</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1408</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1411</td>\n      <td>Цей вид операцій з гривневих карток тимчасово обмежений</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1413</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1419</td>\n      <td>Термін дії карти вказаний невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1420</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1421</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1422</td>\n      <td>Виникла помилка на етапі 3-D Secure)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1425</td>\n      <td>Виникла помилка на етапі 3-D Secure)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1428</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1429</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1433</td>\n      <td>Перевірте імʼя та прізвище отримувача. У випадку зазначення недостовірних даних, банк може відхилити переказ</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1436</td>\n      <td>Кацапське гівно не обслуговуємо</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1439</td>\n      <td>Недопустима операція для використання за програмою єВідновлення</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1458</td>\n      <td>Операция відхилена на кроці 3DS</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>8001</td>\n      <td>Минув термін дії посилання на оплату</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>8002</td>\n      <td>Клієнт відмінив оплату</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>8003</td>\n      <td>Стався технічний збій</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>8004</td>\n      <td>Проблеми з проведенням 3-D Secure </td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>8005</td>\n      <td>Ой, ой, перевищено ліміти на прийом оплат</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>8006</td>\n      <td>Ой, ой, перевищено ліміти на прийом оплат</td>\n      <td>monobank</td>\n    </tr>\n  </table>\n</details>\n"
+      "description": "<details>\n  <summary>Помилки в процесі оплати</summary>\n  <table>\n    <tr>\n      <th>errCode з вебхуку або Статусу рахунку</th>\n      <th>Текст помилки</th>\n      <th>Куди звернутися</th>\n    </tr>\n    <tr>\n      <td>6</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>40</td>\n      <td>Карта втрачена. Витрати обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>41</td>\n      <td>Карта втрачена. Витрати обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>50</td>\n      <td>Витрати по карті обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>51</td>\n      <td>У картки, з якої ви намагаєтеся зробити переказ, закінчився строк дії</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>52</td>\n      <td>Номер картки вказано невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>54</td>\n      <td>Стався технічний збій</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>55</td>\n      <td>Операцію відхилено банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>56</td>\n      <td>Тип карти не підтримує подібні оплати</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>57</td>\n      <td>Транзакція не підтримується</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>58</td>\n      <td>Витрати по карті обмежені на покупку</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>58</td>\n      <td>Витрати по карті обмежені</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>59</td>\n      <td>На картці недостатньо коштів для завершення покупки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>60</td>\n      <td>На картці перевищено ліміт кількості видаткових операцій</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>61</td>\n      <td>На картці перевищено інтернет-ліміт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>62</td>\n      <td>Досягнуто або перевищено ліміт на кількість неправильних вводів PIN-коду</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>63</td>\n      <td>На картці перевищено інтернет-ліміт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>67</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>68</td>\n      <td>Відмова в проведені операції з боку МПС</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>71</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>72</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>73</td>\n      <td>Помилка маршрутизації</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>74</td>\n      <td>Помилка налаштувань торгівельної точки. )</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>75</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>80</td>\n      <td>Неправильний CVV код (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>81</td>\n      <td>Неправильний CVV2 код (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>82</td>\n      <td>Транзакція не дозволена з такими умовами проведення</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>82</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>83</td>\n      <td>Перевищені ліміти спроб оплати з карт</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>84</td>\n      <td>Неправильне значення перевірочного числа 3D Secure Cardholder Authentication Verification Value</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>98</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1000</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1001</td>\n      <td>Некоректний запит</td>\n      <td>API</td>\n    </tr>\n    <tr>\n      <td>1005</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1010</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1014</td>\n      <td>Для проведення оплати потрібно вказати повні реквізити карти</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>1034</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1035</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1036</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1044</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1045</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1053</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1054</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1056</td>\n      <td>Переказ можливий тільки на картку українського банку</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1064</td>\n      <td>Оплата можлива лише з використанням карток Mastercard або Visa</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1066</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1077</td>\n      <td>Сума оплати менша ніж допустима сума (налаштування МПС)</td>\n      <td>API</td>\n    </tr>\n    <tr>\n      <td>1080</td>\n      <td>Термін дії карти вказаний невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1090</td>\n      <td>Інформація про клієнта не знайдена</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1115</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1121</td>\n      <td>Помилка налаштувань торгівельної точки</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1145</td>\n      <td>Мінімальна сума переказу</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1165</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1187</td>\n      <td>Треба вказати імя отримувача </td>\n      <td>API</td>\n    </tr>\n    <tr>\n      <td>1193</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1194</td>\n      <td>Цей спосіб поповнення працює тільки з картами інших банків</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1200</td>\n      <td>Обов'язкова наявність CVV коду (3 цифри на звороті картки)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1405</td>\n      <td>Платіжна система обмежила перекази</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1406</td>\n      <td>Карта заблокована риск-менеджемнтом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1407</td>\n      <td>Операцію заблоковано ризик-менеджментом</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1408</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1411</td>\n      <td>Цей вид операцій з гривневих карток тимчасово обмежений</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1413</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1419</td>\n      <td>Термін дії карти вказаний невірно</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1420</td>\n      <td>Здається, наш кіт облажався</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1421</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1422</td>\n      <td>Виникла помилка на етапі 3-D Secure)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1425</td>\n      <td>Виникла помилка на етапі 3-D Secure)</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1428</td>\n      <td>Операцію заблоковано банком-емітентом</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1429</td>\n      <td>3-D Secure перевірку не пройдено</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>1433</td>\n      <td>Перевірте імʼя та прізвище отримувача. У випадку зазначення недостовірних даних, банк може відхилити переказ</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1436</td>\n      <td>Кацапське гівно не обслуговуємо</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1439</td>\n      <td>Недопустима операція для використання за програмою єВідновлення</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>1458</td>\n      <td>Операция відхилена на кроці 3DS</td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>8001</td>\n      <td>Минув термін дії посилання на оплату</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>8002</td>\n      <td>Клієнт відмінив оплату</td>\n      <td>покупець</td>\n    </tr>\n    <tr>\n      <td>8003</td>\n      <td>Стався технічний збій</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>8004</td>\n      <td>Проблеми з проведенням 3-D Secure </td>\n      <td>банк, який випустив картку</td>\n    </tr>\n    <tr>\n      <td>8005</td>\n      <td>Ой, ой, перевищено ліміти на прийом оплат</td>\n      <td>monobank</td>\n    </tr>\n    <tr>\n      <td>8006</td>\n      <td>Ой, ой, перевищено ліміти на прийом оплат</td>\n      <td>monobank</td>\n    </tr>\n  </table>\n</details>\n"
     }
   ]
 }
