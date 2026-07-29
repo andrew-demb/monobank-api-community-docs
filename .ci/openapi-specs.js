@@ -1,6 +1,7 @@
 'use strict';
 
 const PERSONAL_STATEMENT_PATH = '/personal/statement/{account}/{from}/{to}';
+const VERSION_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 function normalizeTitle(title) {
   return String(title || '').trim().toLowerCase();
@@ -16,6 +17,15 @@ function isCompatibleSpec(target, candidate) {
     target.fileName !== 'open_personal_api.json' ||
     Boolean(candidate?.paths?.[PERSONAL_STATEMENT_PATH])
   );
+}
+
+function selectLatestCompatibleSpec(candidates) {
+  return candidates.reduce((latest, candidate) => {
+    const candidateVersion = String(candidate?.info?.version || '').trim();
+    const latestVersion = String(latest?.info?.version || '').trim();
+
+    return VERSION_COLLATOR.compare(candidateVersion, latestVersion) > 0 ? candidate : latest;
+  });
 }
 
 function matchDiscoveredSpecs(expectedTargets, discoveredSpecs) {
@@ -48,10 +58,7 @@ function matchDiscoveredSpecs(expectedTargets, discoveredSpecs) {
       continue;
     }
 
-    const selectedSpec =
-      compatibleCandidates.find(
-        (candidate) => candidate?.info?.version === expected.currentSpec?.info?.version
-      ) || compatibleCandidates[0];
+    const selectedSpec = selectLatestCompatibleSpec(compatibleCandidates);
     candidates.splice(candidates.indexOf(selectedSpec), 1);
     matches.set(expectedIndex, { discoveredSpec: selectedSpec });
 
