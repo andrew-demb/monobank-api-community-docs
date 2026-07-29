@@ -22,6 +22,7 @@ const RESULT_SPECS_DIR = path.join(SCRIPT_DIR, '.result');
 const OASDIFF_DOCKER_IMAGE = process.env.OASDIFF_DOCKER_IMAGE || 'tufin/oasdiff:latest';
 const OASDIFF_DOCKER_TIMEOUT_MS = Number(process.env.OASDIFF_DOCKER_TIMEOUT_MS) || 60000;
 const execFileAsync = promisify(execFile);
+const UNTRACKED_SPEC_TITLES = new Set(['API для роботи з рахунками юридичних осіб']);
 
 async function readExpectedSpecTargets() {
   const specsDir = path.join(REPO_ROOT_DIR, 'specs');
@@ -190,12 +191,15 @@ async function main() {
   await clearRunDirectories();
 
   const publishedSpecs = await fetchPublishedSpecs();
+  const trackedSpecs = publishedSpecs.specs.filter(
+    (spec) => !UNTRACKED_SPEC_TITLES.has(spec?.info?.title)
+  );
 
   // search for expected specs in the project
   const expectedTargets = await readExpectedSpecTargets();
   // match discovered specs to expected specs
   const { matches, unmatchedExpected, unmatchedDiscovered, duplicatedDiscovered } =
-    matchDiscoveredSpecs(expectedTargets, publishedSpecs.specs);
+    matchDiscoveredSpecs(expectedTargets, trackedSpecs);
 
   await ensureOutputDirs();
   await writeRawCacheFiles(publishedSpecs);
